@@ -214,6 +214,14 @@ namespace HowHardIsThisPersuasionCheck
             return false;
         }
 
+        public static void CopySubrecord(IDialogTopic record, IDialogResponsesGetter subrecordGetter)
+        {
+            if (!record.Responses.Any() || !record.Responses.Last().FormKey.Equals(subrecordGetter.FormKey))
+            {
+                record.Responses.Add(subrecordGetter.DeepCopy());
+            }
+        }
+
         public static void RunPatch(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
             //Declare container for Dialog Topic (DIAL) records
@@ -263,10 +271,7 @@ namespace HowHardIsThisPersuasionCheck
                     {
                         if (TryResolveDifficulty(conditionGetter, out var difficulty) && !difficulty.IsNullOrEmpty())
                         {
-                            if (!record.Responses.Any() || !record.Responses.Last().FormKey.Equals(subrecordGetter.FormKey))
-                            {
-                                record.Responses.Add(subrecordGetter.DeepCopy());
-                            }
+                            CopySubrecord(record, subrecordGetter);
                             IDialogResponses subrecord = record.Responses.Last();
                             ICondition condition = subrecord.Conditions[subrecordGetter.Conditions.IndexOf(conditionGetter)];
                             checks.Add(difficulty);
@@ -278,12 +283,9 @@ namespace HowHardIsThisPersuasionCheck
                             }
                         }
                     }
-                    if (TryResolvePersuasion(subrecordGetter, out var persuasionCondition) && !TryResolveAmulet(subrecordGetter, out _))
+                    if (TryResolvePersuasion(subrecordGetter, out var _) && !TryResolveAmulet(subrecordGetter, out _))
                     {
-                        if (!record.Responses.Any() || !record.Responses.Last().FormKey.Equals(subrecordGetter.FormKey))
-                        {
-                            record.Responses.Add(subrecordGetter.DeepCopy());
-                        }
+                        CopySubrecord(record, subrecordGetter);
                         IDialogResponses subrecord = record.Responses.Last();
                         Condition amuletCondition = new ConditionFloat
                         {
@@ -300,6 +302,7 @@ namespace HowHardIsThisPersuasionCheck
                             CompareOperator = CompareOperator.EqualTo,
                             ComparisonValue = 1
                         };
+                        TryResolvePersuasion(subrecord, out var persuasionCondition);
                         if (subrecord.Conditions.Last() == persuasionCondition)
                         {
                             subrecord.Conditions.Add(amuletCondition);
@@ -311,40 +314,26 @@ namespace HowHardIsThisPersuasionCheck
                     }
                     if (TryResolvePrompt(subrecordGetter, out var prompt) && prompt.Contains("(Persuade)"))
                     {
-                        if (!record.Responses.Any() || !record.Responses.Last().FormKey.Equals(subrecordGetter.FormKey))
-                        {
-                            record.Responses.Add(subrecordGetter.DeepCopy());
-                        }
+                        CopySubrecord(record, subrecordGetter);
                         IDialogResponses subrecord = record.Responses.Last();
                         subrecord.Prompt!.String = prompt.Replace("(Persuade)", $"(Persuade: {checks.Last()})");
                     }
                     if (recordGetter.EditorID is not null && (recordGetter.EditorID.Equals("MS05PoemVerse2Evil") || recordGetter.EditorID.Equals("MG03CallerBookPersuade")))
                     {
-                        if (!record.Responses.Any() || !record.Responses.Last().FormKey.Equals(subrecordGetter.FormKey))
-                        {
-                            record.Responses.Add(subrecordGetter.DeepCopy());
-                        }
+                        CopySubrecord(record, subrecordGetter);
                         IDialogResponses subrecord = record.Responses.Last();
                         subrecord.Prompt?.Clear();
                     }
                     if (subrecordGetter.PreviousDialog is null && !recordGetter.Responses.First().Equals(subrecordGetter))
                     {
-                        if (!record.Responses.Any() || !record.Responses.Last().FormKey.Equals(subrecordGetter.FormKey))
-                        {
-                            Console.WriteLine(subrecordGetter.FormKey);
-                            Console.WriteLine("Previous Dialog");
-                            record.Responses.Add(subrecordGetter.DeepCopy());
-                        }
+                        CopySubrecord(record, subrecordGetter);
                         IDialogResponses subrecord = record.Responses.Last();
                         IDialogResponsesGetter priorSubrecord = recordGetter.Responses[recordGetter.Responses.IndexOf(subrecordGetter) - 1];
                         subrecord.PreviousDialog = new FormLinkNullable<IDialogResponsesGetter>(priorSubrecord);
                     }
                     if (recordGetter.EditorID is not null && recordGetter.EditorID.Equals("DA15Convince"))
                     {
-                        if (!record.Responses.Any() || !record.Responses.Last().FormKey.Equals(subrecordGetter.FormKey))
-                        {
-                            record.Responses.Add(subrecordGetter.DeepCopy());
-                        }
+                        CopySubrecord(record, subrecordGetter);
                         IDialogResponses subrecord = record.Responses.Last();
                         subrecord.Conditions.First().Data.Reference = Skyrim.Npc.FalkFirebeard;
                     }
