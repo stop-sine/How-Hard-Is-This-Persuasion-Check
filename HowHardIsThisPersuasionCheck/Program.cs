@@ -214,12 +214,13 @@ namespace HowHardIsThisPersuasionCheck
             return false;
         }
 
-        public static void CopySubrecord(IDialogTopic record, IDialogResponsesGetter subrecordGetter)
+        public static IDialogResponses CopySubrecord(IDialogTopic record, IDialogResponsesGetter subrecordGetter)
         {
             if (!record.Responses.Any() || !record.Responses.Last().FormKey.Equals(subrecordGetter.FormKey))
             {
                 record.Responses.Add(subrecordGetter.DeepCopy());
             }
+            return record.Responses.Last();
         }
 
         public static void RunPatch(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
@@ -271,8 +272,7 @@ namespace HowHardIsThisPersuasionCheck
                     {
                         if (TryResolveDifficulty(conditionGetter, out var difficulty) && !difficulty.IsNullOrEmpty())
                         {
-                            CopySubrecord(record, subrecordGetter);
-                            IDialogResponses subrecord = record.Responses.Last();
+                            var subrecord = CopySubrecord(record, subrecordGetter);
                             ICondition condition = subrecord.Conditions[subrecordGetter.Conditions.IndexOf(conditionGetter)];
                             checks.Add(difficulty);
                             condition.Data.RunOnType = RunOnType.Reference;
@@ -285,8 +285,7 @@ namespace HowHardIsThisPersuasionCheck
                     }
                     if (TryResolvePersuasion(subrecordGetter, out var _) && !TryResolveAmulet(subrecordGetter, out _))
                     {
-                        CopySubrecord(record, subrecordGetter);
-                        IDialogResponses subrecord = record.Responses.Last();
+                        var subrecord = CopySubrecord(record, subrecordGetter);
                         Condition amuletCondition = new ConditionFloat
                         {
                             Data = new GetEquippedConditionData
@@ -314,27 +313,23 @@ namespace HowHardIsThisPersuasionCheck
                     }
                     if (TryResolvePrompt(subrecordGetter, out var prompt) && prompt.Contains("(Persuade)"))
                     {
-                        CopySubrecord(record, subrecordGetter);
-                        IDialogResponses subrecord = record.Responses.Last();
+                        var subrecord = CopySubrecord(record, subrecordGetter);
                         subrecord.Prompt!.String = prompt.Replace("(Persuade)", $"(Persuade: {checks.Last()})");
                     }
                     if (recordGetter.EditorID is not null && (recordGetter.EditorID.Equals("MS05PoemVerse2Evil") || recordGetter.EditorID.Equals("MG03CallerBookPersuade")))
                     {
-                        CopySubrecord(record, subrecordGetter);
-                        IDialogResponses subrecord = record.Responses.Last();
+                        var subrecord = CopySubrecord(record, subrecordGetter);
                         subrecord.Prompt?.Clear();
                     }
                     if (subrecordGetter.PreviousDialog is null && !recordGetter.Responses.First().Equals(subrecordGetter))
                     {
-                        CopySubrecord(record, subrecordGetter);
-                        IDialogResponses subrecord = record.Responses.Last();
+                        var subrecord = CopySubrecord(record, subrecordGetter);
                         IDialogResponsesGetter priorSubrecord = recordGetter.Responses[recordGetter.Responses.IndexOf(subrecordGetter) - 1];
                         subrecord.PreviousDialog = new FormLinkNullable<IDialogResponsesGetter>(priorSubrecord);
                     }
                     if (recordGetter.EditorID is not null && recordGetter.EditorID.Equals("DA15Convince"))
                     {
-                        CopySubrecord(record, subrecordGetter);
-                        IDialogResponses subrecord = record.Responses.Last();
+                        var subrecord = CopySubrecord(record, subrecordGetter);
                         subrecord.Conditions.First().Data.Reference = Skyrim.Npc.FalkFirebeard;
                     }
                 }
