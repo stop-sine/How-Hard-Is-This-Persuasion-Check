@@ -260,12 +260,14 @@ namespace HowHardIsThisPersuasionCheck
             //Iterate through records to be patched
             foreach (var link in patchedRecords)
             {
+                //Declare container for INFO subrecords
+                var grup = new HashSet<IDialogResponsesGetter>();
                 //Resolve FormLink
                 var recordGetter = link.Resolve(state.LinkCache);
                 //Add record to patch
                 IDialogTopic record = state.PatchMod.DialogTopics.GetOrAddAsOverride(recordGetter);
                 //Container for persuasion checks
-                var checks = new HashSet<string>();
+                var checks = new List<string>();
                 foreach (IDialogResponsesGetter subrecordGetter in recordGetter.Responses)
                 {
                     foreach (IConditionGetter conditionGetter in subrecordGetter.Conditions)
@@ -316,18 +318,24 @@ namespace HowHardIsThisPersuasionCheck
                         var subrecord = CopySubrecord(record, subrecordGetter);
                         subrecord.Prompt!.String = prompt.Replace("(Persuade)", $"(Persuade: {checks.Last()})");
                     }
-                    if (recordGetter.EditorID is not null && (recordGetter.EditorID.Equals("MS05PoemVerse2Evil") || recordGetter.EditorID.Equals("MG03CallerBookPersuade")))
+                    if (!TryResolvePrompt(subrecordGetter, out var _) && TryResolvePersuasion(subrecordGetter, out var _))
+                    {
+                        var subrecord = CopySubrecord(record, subrecordGetter);
+                        var temp = record.Name!.String!;
+                        subrecord.Prompt = temp.Replace("(Persuade)", $"(Persuade: {checks.Last()})");
+                    }
+                    if (recordGetter.FormKey.Equals(Skyrim.DialogTopic.MS05PoemVerse2Evil) || recordGetter.FormKey.Equals(Skyrim.DialogTopic.MG03CallerBookPersuade))
                     {
                         var subrecord = CopySubrecord(record, subrecordGetter);
                         subrecord.Prompt?.Clear();
                     }
-                    if (subrecordGetter.PreviousDialog is null && !recordGetter.Responses.First().Equals(subrecordGetter))
+                    if (subrecordGetter.PreviousDialog is null && !recordGetter.Responses[0].Equals(subrecordGetter))
                     {
                         var subrecord = CopySubrecord(record, subrecordGetter);
                         IDialogResponsesGetter priorSubrecord = recordGetter.Responses[recordGetter.Responses.IndexOf(subrecordGetter) - 1];
                         subrecord.PreviousDialog = new FormLinkNullable<IDialogResponsesGetter>(priorSubrecord);
                     }
-                    if (recordGetter.EditorID is not null && recordGetter.EditorID.Equals("DA15Convince"))
+                    if (recordGetter.FormKey.Equals(Skyrim.DialogTopic.DA15Convince))
                     {
                         var subrecord = CopySubrecord(record, subrecordGetter);
                         subrecord.Conditions.First().Data.Reference = Skyrim.Npc.FalkFirebeard;
@@ -337,7 +345,7 @@ namespace HowHardIsThisPersuasionCheck
                 {
                     record.Name!.String = name.Replace("(Persuade)", $"(Persuade: {checks.Last()})");
                 }
-            }
+            }    
         }
     }
 }
