@@ -19,13 +19,36 @@ using Microsoft.Extensions.Logging.Abstractions;
 using System.Security.Permissions;
 using System.Data;
 using System.Reflection;
+using System.Linq;
 using Mutagen.Bethesda.FormKeys.SkyrimSE;
 using Mutagen.Bethesda.Plugins.Implicit;
+using Noggog.StructuredStrings.CSharp;
+using CommandLine;
+using System.ComponentModel.Design;
 
 namespace HowHardIsThisPersuasionCheck
 {
     public class Program
     {
+        public static readonly List<FormKey> SpeechGlobals =
+        [
+            Skyrim.Global.SpeechVeryEasy.FormKey,
+            Skyrim.Global.SpeechEasy.FormKey,
+            Skyrim.Global.SpeechAverage.FormKey,
+            Skyrim.Global.SpeechHard.FormKey,
+            Skyrim.Global.SpeechVeryHard.FormKey
+        ];
+
+        public static readonly Dictionary<FormKey, string> SpeechValues = new()
+        {
+            {SpeechGlobals[0], "Novice"},
+            {SpeechGlobals[1], "Apprentice"},
+            {SpeechGlobals[2], "Adept"},
+            {SpeechGlobals[3], "Expert"},
+            {SpeechGlobals[4], "Master"}
+        };
+
+
         public static async Task<int> Main(string[] args)
         {
             return await SynthesisPipeline.Instance
@@ -34,261 +57,148 @@ namespace HowHardIsThisPersuasionCheck
                 .Run(args);
         }
 
-        public static HashSet<IFormLinkGetter<IGlobalGetter>> GetSpeech()
+
+        public static bool GetAmuletCondition(DialogResponses info, out ConditionFloat? amulet)
         {
-            var speech = new HashSet<IFormLinkGetter<IGlobalGetter>>
-            {
-                Skyrim.Global.SpeechVeryEasy,
-                Skyrim.Global.SpeechEasy,
-                Skyrim.Global.SpeechAverage,
-                Skyrim.Global.SpeechHard,
-                Skyrim.Global.SpeechVeryHard
-            };
-            return speech;
+            Condition condition = info.Conditions.FirstOrDefault(c => c.Data is GetEquippedConditionData e && e.ItemOrList.Link.Equals(Skyrim.FormList.TGAmuletofArticulationList))!;
+            amulet = condition as ConditionFloat;
+            return amulet != null;
         }
 
-        public static string AssignDifficulty(IFormLink<IGlobalGetter> formLink)
+        public static bool GetAmuletCondition(IDialogResponsesGetter info, out IConditionFloatGetter? condition)
         {
-            
-            if (formLink.Equals(Skyrim.Global.SpeechVeryEasy))
-            {
-                return "Novice";
-            }
-            else if (formLink.Equals(Skyrim.Global.SpeechEasy))
-            {
-                return "Apprentice";
-            }
-            else if (formLink.Equals(Skyrim.Global.SpeechAverage))
-            {
-                return "Adept";
-            }
-            else if (formLink.Equals(Skyrim.Global.SpeechHard))
-            {
-                return "Expert";
-            }
-            else if (formLink.Equals(Skyrim.Global.SpeechVeryHard))
-            {
-                return "Master";
-            }
+            IConditionGetter foundCondition = info.Conditions.FirstOrDefault(c => c.Data is GetEquippedConditionData e && e.ItemOrList.Link.Equals(Skyrim.FormList.TGAmuletofArticulationList))!;
+            condition = foundCondition as IConditionFloatGetter;
+            return condition != null;
+        }
+
+        public static bool GetAmuletResponses(ExtendedList<DialogResponses> grup, out List<DialogResponses> subrecords)
+        {
+            subrecords = [.. grup.Where(subrecord => GetAmuletCondition(subrecord, out _))];
+            return subrecords.Count > 0;
+        }
+
+        public static bool GetAmuletResponses(IReadOnlyList<IDialogResponsesGetter> grup, out List<IDialogResponsesGetter> subrecords)
+        {
+            subrecords = [.. grup.Where(subrecord => GetAmuletCondition(subrecord, out _))];
+            return subrecords.Count > 0;
+        }
+
+        public static string GetSpeechValue(Condition condition)
+        {
+            return SpeechValues[condition.Cast<ConditionGlobal>().ComparisonValue.FormKey];
+        }
+
+        public static string GetSpeechValue(IConditionGetter condition)
+        {
+            return SpeechValues[condition.Cast<IConditionGlobalGetter>().ComparisonValue.FormKey];
+        }
+
+        public static IConditionGetter? GetSpeechCondition(IDialogResponsesGetter? info)
+        {
+            return info?.Conditions.FirstOrDefault(c => c is IConditionGlobalGetter global && SpeechGlobals.Contains(global.ComparisonValue.FormKey));
+        }
+
+        public static Condition? GetSpeechCondition(DialogResponses? info)
+        {
+            return info?.Conditions.FirstOrDefault(c => c is ConditionGlobal global && SpeechGlobals.Contains(global.ComparisonValue.FormKey));
+        }
+
+        public static bool GetSpeechCondition(DialogResponses info, out Condition? condition)
+        {
+            condition = info.Conditions.FirstOrDefault(c => c.DeepCopy() is ConditionGlobal global && SpeechGlobals.Contains(global.ComparisonValue.FormKey));
+            return condition != null;
+        }
+
+        public static bool GetSpeechCondition(IDialogResponsesGetter info, out IConditionGetter? condition)
+        {
+            condition = info.Conditions.FirstOrDefault(c => c is IConditionGlobalGetter global && SpeechGlobals.Contains(global.ComparisonValue.FormKey));
+            return condition != null;
+        }
+
+        public static bool GetSpeechCondition(IReadOnlyList<IConditionGetter> conditions, out IConditionGetter? condition)
+        {
+            condition = conditions.FirstOrDefault(c => c is IConditionGlobalGetter global && SpeechGlobals.Contains(global.ComparisonValue.FormKey));
+            return condition != null;
+        }
+
+        public static bool GetSpeechCondition(ExtendedList<Condition> conditions, out Condition? condition)
+        {
+            condition = conditions.FirstOrDefault(c => c is ConditionGlobal global && SpeechGlobals.Contains(global.ComparisonValue.FormKey));
+            return condition != null;
+        }
+
+        public static IReadOnlyList<IDialogResponsesGetter>? GetSpeechResponses(IReadOnlyList<IDialogResponsesGetter> grup)
+        {
+            var responses = grup.Where(info => GetSpeechCondition(info) != null).ToList();
+            if (responses.Count > 0)
+                return responses;
             else
-            {
-                return "";
-            }
+                return null;
         }
 
-        public static void ConsolePrint(ILinkCache<ISkyrimMod, ISkyrimModGetter> cache, HashSet<IFormLinkGetter<IDialogTopicGetter>> container)
+        public static bool GetSpeechResponses(IReadOnlyList<IDialogResponsesGetter> grup, out List<IDialogResponsesGetter> subrecords)
         {
-            foreach (var record in container)
-            {
-                Console.WriteLine(record.Resolve(cache).EditorID);
-            }
-        }
-
-        public static bool TryResolveAmulet(IDialogResponses info, out ICondition? amuletCondition)
-        {
-            amuletCondition = null;
-            foreach (ICondition condition in info.Conditions)
-            {
-                if (condition.Data is IConditionData conditionData &&
-                conditionData.Function is Function.GetEquipped &&
-                conditionData is GetEquippedConditionData equipped &&
-                equipped.ItemOrList.Link.Equals(Skyrim.FormList.TGAmuletofArticulationList))
-                {
-                    amuletCondition = condition;
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        public static bool TryResolveAmulet(IDialogResponsesGetter info, out IConditionGetter? amuletCondition)
-        {
-            amuletCondition = null;
-            foreach (IConditionGetter condition in info.Conditions)
-            {
-                if (condition.DeepCopy().Data is IConditionData conditionData &&
-                conditionData.Function is Function.GetEquipped &&
-                conditionData is GetEquippedConditionData equipped &&
-                equipped.ItemOrList.Link.Equals(Skyrim.FormList.TGAmuletofArticulationList))
-                {
-                    amuletCondition = condition;
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        public static bool TryResolvePersuasion(IDialogResponses info, out ICondition? persuasionCondition)
-        {
-            persuasionCondition = null;
-            foreach (ICondition condition in info.Conditions)
-            {
-                if (condition.DeepCopy() is ConditionGlobal global && GetSpeech().Contains(global.ComparisonValue))
-                {
-                    persuasionCondition = condition;
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        public static bool TryResolvePersuasion(IDialogResponsesGetter info, out IConditionGetter? persuasionCondition)
-        {
-            persuasionCondition = null;
-            foreach (IConditionGetter condition in info.Conditions)
-            {
-                if (condition.DeepCopy() is ConditionGlobal global && GetSpeech().Contains(global.ComparisonValue))
-                {
-                    persuasionCondition = condition;
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        public static bool TryResolveName(IDialogTopic record, out string name)
-        {
-            name = "";
-            if (record.Name is not null && !record.Name.String.IsNullOrEmpty())
-            {
-                name = record.Name!;
-                return true;
-            }
-            return false;
-        }
-
-        public static bool TryResolveName(IDialogTopicGetter recordGetter, out string name)
-        {
-            name = "";
-            IDialogTopic record = recordGetter.DeepCopy();
-            if (record.Name is not null && !record.Name.String.IsNullOrEmpty())
-            {
-                name = record.Name.String;
-                return true;
-            }
-            return false;
-        }
-
-        public static bool TryResolvePrompt(IDialogResponses subrecord, out string prompt)
-        {
-            prompt = "";
-            if (subrecord.Prompt is not null)
-            {
-                prompt = subrecord.Prompt.String!;
-                return true;
-            }
-            return false;
-        }
-
-        public static bool TryResolvePrompt(IDialogResponsesGetter subrecordGetter, out string prompt)
-        {
-            prompt = "";
-            IDialogResponses subrecord = subrecordGetter.DeepCopy();
-            if (subrecord.Prompt is not null)
-            {
-                prompt = subrecord.Prompt.String!;
-                return true;
-            }
-            return false;
-        }
-
-        public static bool TryResolveDifficulty(ICondition condition, out string difficulty)
-        {
-            difficulty = "";
-            if (condition is ConditionGlobal global && GetSpeech().Contains(global.ComparisonValue))
-            {
-                difficulty = AssignDifficulty(global.ComparisonValue);
-                return true;
-            }
-            return false;
-        }
-
-        public static bool TryResolveDifficulty(IConditionGetter condition, out string difficulty)
-        {
-            difficulty = "";
-            if (condition.DeepCopy() is ConditionGlobal global && GetSpeech().Contains(global.ComparisonValue))
-            {
-                difficulty = AssignDifficulty(global.ComparisonValue);
-                return true;
-            }
-            return false;
-        }
-
-        public static IDialogResponses CopySubrecord(IDialogTopic record, IDialogResponsesGetter subrecordGetter)
-        {
-            if (!record.Responses.Any() || !record.Responses.Last().FormKey.Equals(subrecordGetter.FormKey))
-            {
-                record.Responses.Add(subrecordGetter.DeepCopy());
-            }
-            return record.Responses.Last();
+            subrecords = [.. grup.Where(info => GetSpeechCondition(info, out _))];
+            return subrecords.Count > 0;
         }
 
         public static void RunPatch(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
-            //Declare container for Dialog Topic (DIAL) records
-            var dialogRecords = new HashSet<IFormLinkGetter<IDialogTopicGetter>>();
-            //Iterate through winning DIAL records in load order
-            foreach (var record in state.LoadOrder.PriorityOrder.DialogTopic().WinningOverrides())
+            var cache = state.LinkCache;
+            var records = new List<IDialogTopicGetter>();
+            var subrecords = new Dictionary<FormKey, List<IDialogResponsesGetter>>();
+            foreach (var record in state.LoadOrder.PriorityOrder.DialogTopic().WinningOverrides().Where(r => GetSpeechResponses(r.Responses) != null))
+                records.Add(record);
+            Console.WriteLine($"Found {records.Count} Dialog Topic records with persuasion checks");
+            foreach (var record in records)
+                Console.WriteLine(record.EditorID);
+            foreach (var record in records)
             {
-                //Assign record's FormLink to DIAL container
-                dialogRecords.Add((FormLink<IDialogTopicGetter>)record.FormKey);
-            }
-            //Print number of DIAL records in load order
-            Console.WriteLine($"Found {dialogRecords.Count} DIAL records in load order");
-            //Declare container for DIAL records to be patched
-            var patchedRecords = new HashSet<IFormLinkGetter<IDialogTopicGetter>>();
-            //Iterate through DIAL records
-            foreach (var link in dialogRecords)
-            {
-                //Resolve and assign record's FormLink
-                var record = link.Resolve(state.LinkCache);
-                //Iterate through INFO subrecords in record
-                foreach (var subrecord in record.Responses)
+                var responses = new List<IDialogResponsesGetter>();
+                GetSpeechResponses(record.Responses, out var speechResponses);
+                foreach (var info in record.Responses)
                 {
-                    //Check if subrecord contains a persuasion check
-                    if (TryResolvePersuasion(subrecord, out _))
+                    if (speechResponses.Contains(info)
+                        || (info.PreviousDialog!.IsNull && record.Responses.IndexOf(info) != 0)
+                        || (info.Prompt?.String?.Contains("(Persuade)") == true)
+                        || (info.Prompt is null && speechResponses.Count > 1 && !speechResponses.Any(r => GetSpeechCondition(r) != GetSpeechCondition(speechResponses[0])))
+                        || info.FormKey.Equals(FormKey.Factory("0E7752:Skyrim.esm"))
+                        || info.FormKey.Equals(FormKey.Factory("04DDAA:Skyrim.esm"))
+                        || info.FormKey.Equals(FormKey.Factory("02B8BD:Skyrim.esm")))
                     {
-                        //Assign parent record's FormLink to container
-                        patchedRecords.Add(link);
+                        responses.Add(info);
                     }
                 }
+                subrecords.Add(record.FormKey, responses);
             }
-            //Print number of records with persuasion checks
-            Console.WriteLine($"Found {patchedRecords.Count} records with persuasion checks");
-            //Print record Editor IDs to console
-            ConsolePrint(state.LinkCache, patchedRecords);
-            //Iterate through records to be patched
-            foreach (var link in patchedRecords)
+            foreach (var record in records)
             {
-                //Declare container for INFO subrecords
-                var grup = new HashSet<IDialogResponsesGetter>();
-                //Resolve FormLink
-                var recordGetter = link.Resolve(state.LinkCache);
-                //Add record to patch
-                IDialogTopic record = state.PatchMod.DialogTopics.GetOrAddAsOverride(recordGetter);
-                //Container for persuasion checks
-                var checks = new List<string>();
-                foreach (IDialogResponsesGetter subrecordGetter in recordGetter.Responses)
+                var dial = state.PatchMod.DialogTopics.GetOrAddAsOverride(record);
+                var grup = dial.Responses;
+                foreach (var info in subrecords[record.FormKey])
+                    grup.Add(info.DeepCopy());
+                var speeches = grup.Where(r => GetSpeechCondition(r) != null).ToList();
+                if (dial.Name != null && dial.Name.String != null && (speeches.Count == 1 || !speeches.Any(r => GetSpeechValue(GetSpeechCondition(r)!) != GetSpeechValue(GetSpeechCondition(speeches[0])!))))
                 {
-                    foreach (IConditionGetter conditionGetter in subrecordGetter.Conditions)
+                    if (dial.Name.String.Contains("Persuade"))
+                        dial.Name.String = dial.Name.String.Replace("(Persuade)", $"(Persuade: {GetSpeechValue(GetSpeechCondition(speeches[0])!)})");
+                    else
+                        dial.Name.String = dial.Name + $" (Persuade: {GetSpeechValue(GetSpeechCondition(speeches[0])!)})";
+                }
+                foreach (var info in grup)
+                {
+                    int responseIndex = ListExt.FindIndex<IDialogResponsesGetter, IDialogResponsesGetter>(record.Responses, s => s.FormKey == info.FormKey);
+                    if (info.PreviousDialog.IsNull && responseIndex != 0)
+                        info.PreviousDialog = new FormLinkNullable<IDialogResponsesGetter>(record.Responses[responseIndex - 1]);
+                    if (GetSpeechCondition(info.Conditions, out var speech))
                     {
-                        if (TryResolveDifficulty(conditionGetter, out var difficulty) && !difficulty.IsNullOrEmpty())
-                        {
-                            var subrecord = CopySubrecord(record, subrecordGetter);
-                            ICondition condition = subrecord.Conditions[subrecordGetter.Conditions.IndexOf(conditionGetter)];
-                            checks.Add(difficulty);
-                            condition.Data.RunOnType = RunOnType.Reference;
-                            condition.Data.Reference = Skyrim.PlayerRef;
-                            if (condition.Flags is not Flag.OR)
-                            {
-                                condition.Flags = Flag.OR;
-                            }
-                        }
+                        speech!.Data.RunOnType = RunOnType.Reference;
+                        speech!.Data.Reference = Skyrim.PlayerRef;
                     }
-                    if (TryResolvePersuasion(subrecordGetter, out var _) && !TryResolveAmulet(subrecordGetter, out _))
+                    if (speech is not null && !GetAmuletCondition(info, out var amulet))
                     {
-                        var subrecord = CopySubrecord(record, subrecordGetter);
-                        Condition amuletCondition = new ConditionFloat
+                        amulet = new ConditionFloat
                         {
                             Data = new GetEquippedConditionData
                             {
@@ -303,49 +213,31 @@ namespace HowHardIsThisPersuasionCheck
                             CompareOperator = CompareOperator.EqualTo,
                             ComparisonValue = 1
                         };
-                        TryResolvePersuasion(subrecord, out var persuasionCondition);
-                        if (subrecord.Conditions.Last() == persuasionCondition)
-                        {
-                            subrecord.Conditions.Add(amuletCondition);
-                        }
+                        if (info.Conditions.Last().Equals(speech))
+                            info.Conditions.Add(amulet);
                         else
-                        {
-                            subrecord.Conditions.Insert(subrecord.Conditions.IndexOf(persuasionCondition) + 1, amuletCondition);
-                        }
+                            info.Conditions.Insert(info.Conditions.IndexOf(speech) + 1, amulet);
                     }
-                    if (TryResolvePrompt(subrecordGetter, out var prompt) && prompt.Contains("(Persuade)"))
+                    if (info.FormKey.Equals(FormKey.Factory("0E7752:Skyrim.esm")) || info.FormKey.Equals(FormKey.Factory("04DDAA:Skyrim.esm")))
+                        info.Prompt!.Clear();
+                    if (info.FormKey.Equals(FormKey.Factory("02B8BD:Skyrim.esm")))
                     {
-                        var subrecord = CopySubrecord(record, subrecordGetter);
-                        subrecord.Prompt!.String = prompt.Replace("(Persuade)", $"(Persuade: {checks.Last()})");
+                        var conditionData = (GetRelationshipRankConditionData)info.Conditions.First().Data;
+                        conditionData.TargetNpc.Link.SetTo(Skyrim.PlacedNpc.FalkFirebeardREF);
                     }
-                    if (!TryResolvePrompt(subrecordGetter, out var _) && TryResolvePersuasion(subrecordGetter, out var _))
+                    if (speeches.Count != 0)
+                        speech ??= GetSpeechCondition(speeches.Last());
+                    if (info.Prompt == null && dial.Name != null && dial.Name.String != null && speeches.Count > 1 && speeches.Any(r => GetSpeechValue(GetSpeechCondition(r)!) != GetSpeechValue(GetSpeechCondition(speeches[0])!)))
                     {
-                        var subrecord = CopySubrecord(record, subrecordGetter);
-                        var temp = record.Name!.String!;
-                        subrecord.Prompt = temp.Replace("(Persuade)", $"(Persuade: {checks.Last()})");
+                        if (dial.Name.String.Contains("(Persuade)"))
+                            info.Prompt = dial.Name.String.Replace("(Persuade)", $"(Persuade: {GetSpeechValue(speech!)})");
+                        else
+                            info.Prompt = dial.Name + $"(Persuade: {GetSpeechValue(speech!)})";
                     }
-                    if (recordGetter.FormKey.Equals(Skyrim.DialogTopic.MS05PoemVerse2Evil) || recordGetter.FormKey.Equals(Skyrim.DialogTopic.MG03CallerBookPersuade))
-                    {
-                        var subrecord = CopySubrecord(record, subrecordGetter);
-                        subrecord.Prompt?.Clear();
-                    }
-                    if (subrecordGetter.PreviousDialog is null && !recordGetter.Responses[0].Equals(subrecordGetter))
-                    {
-                        var subrecord = CopySubrecord(record, subrecordGetter);
-                        IDialogResponsesGetter priorSubrecord = recordGetter.Responses[recordGetter.Responses.IndexOf(subrecordGetter) - 1];
-                        subrecord.PreviousDialog = new FormLinkNullable<IDialogResponsesGetter>(priorSubrecord);
-                    }
-                    if (recordGetter.FormKey.Equals(Skyrim.DialogTopic.DA15Convince))
-                    {
-                        var subrecord = CopySubrecord(record, subrecordGetter);
-                        subrecord.Conditions.First().Data.Reference = Skyrim.Npc.FalkFirebeard;
-                    }
+                    if (!(dial.Name != null && dial.Name.String != null && dial.Name!.String!.Contains("(Persuade:")) && info.Prompt is not null && info.Prompt.String is not null && info.Prompt.String.Contains("(Persuade)"))
+                        info.Prompt.String = info.Prompt.String.Replace("(Persuade)", $"(Persuade: {GetSpeechValue(speech!)})");
                 }
-                if (TryResolveName(recordGetter, out var name) && name.Contains("(Persuade)"))
-                {
-                    record.Name!.String = name.Replace("(Persuade)", $"(Persuade: {checks.Last()})");
-                }
-            }    
+            }
         }
     }
 }
