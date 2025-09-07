@@ -419,6 +419,7 @@ namespace HowHardIsThisPersuasionCheck
                 var speechGrup = grup.Where(SpeechCheckFilter);
                 foreach (var info in grup)
                 {
+                    Console.WriteLine(info.FormKey);
                     if (SpeechCheckFilter(info))
                     {
                         var speech = info.Conditions.Find(SpeechConditionFilter);
