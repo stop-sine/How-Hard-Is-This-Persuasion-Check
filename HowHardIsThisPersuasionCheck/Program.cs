@@ -186,14 +186,12 @@ namespace HowHardIsThisPersuasionCheck
                 if (record.Equals(Skyrim.DialogTopic.MG04MirabelleAugurInfoBranchTopic))
                 {
                     var baseResponse = grup.Find(r => r.FormKey == FormKey.Factory("04FA11:Skyrim.esm"));
-                    var newResponse = new DialogResponses(patchMod)
+                    grup.Insert(grup.IndexOf(baseResponse!) + 1, new DialogResponses(patchMod)
                     {
-                        Flags = new DialogResponseFlags(),
-                        ResponseData = FormKey.Factory("0E0CC4:Skyrim.esm").ToNullableLink<IDialogResponsesGetter>(),
-                        Conditions = [baseResponse!.Conditions[0], baseResponse.Conditions[1]]
-                    };
-                    newResponse.Flags!.Flags |= DialogResponses.Flag.Goodbye;
-                    grup.Insert(grup.IndexOf(baseResponse) + 1, newResponse);
+                        Conditions = [baseResponse!.Conditions[0], baseResponse.Conditions[1]],
+                        Flags = new DialogResponseFlags() { Flags = DialogResponses.Flag.Goodbye },
+                        ResponseData = FormKey.Factory("0E0CC4:Skyrim.esm").ToNullableLink<IDialogResponsesGetter>()
+                    });
                 }
                 if (record.Equals(Skyrim.DialogTopic.DB01MiscGuardPlayerCiceroFramed3))
                 {
@@ -201,15 +199,15 @@ namespace HowHardIsThisPersuasionCheck
                     record.Name = baseResponse!.Prompt;
                     baseResponse.Prompt = null;
                     baseResponse.Conditions.Add(ConstructSpeech(Skyrim.Global.SpeechVeryEasy));
-
                     grup.Insert(grup.IndexOf(baseResponse) + 1, new DialogResponses(patchMod)
                     {
-                        ResponseData = FormKey.Factory("0E0CC4:Skyrim.esm").ToNullableLink<IDialogResponsesGetter>(),
-                        Flags = new DialogResponseFlags(),
                         Conditions = [baseResponse.Conditions[0], baseResponse.Conditions[1]],
-                        LinkTo = [Skyrim.DialogTopic.DB01MiscGuardPlayerCiceroFramed1,
-                        Skyrim.DialogTopic.DB01MiscGuardPlayerCiceroFramed2,
-                        Skyrim.DialogTopic.DB01MiscGuardPlayerCiceroFramed3]
+                        ResponseData = FormKey.Factory("0E0CC4:Skyrim.esm").ToNullableLink<IDialogResponsesGetter>(),
+                        LinkTo = [
+                            Skyrim.DialogTopic.DB01MiscGuardPlayerCiceroFramed1,
+                            Skyrim.DialogTopic.DB01MiscGuardPlayerCiceroFramed2,
+                            Skyrim.DialogTopic.DB01MiscGuardPlayerCiceroFramed3
+                        ]
                     });
                 }
                 if (record.Equals(Skyrim.DialogTopic.DB01MiscGuardPlayerCiceroFramed2))
@@ -236,12 +234,13 @@ namespace HowHardIsThisPersuasionCheck
                     baseResponse.Conditions.Add(ConstructSpeech(Skyrim.Global.SpeechAverage));
                     grup.Insert(grup.IndexOf(baseResponse) + 1, new DialogResponses(patchMod)
                     {
-                        ResponseData = FormKey.Factory("0E0CC4:Skyrim.esm").ToNullableLink<IDialogResponsesGetter>(),
-                        Flags = new DialogResponseFlags(),
                         Conditions = [baseResponse.Conditions[0], baseResponse.Conditions[1]],
-                        LinkTo = [Skyrim.DialogTopic.DB01MiscGuardPlayerCiceroFramed1,
-                        Skyrim.DialogTopic.DB01MiscGuardPlayerCiceroFramed2,
-                        Skyrim.DialogTopic.DB01MiscGuardPlayerCiceroFramed3]
+                        ResponseData = FormKey.Factory("0E0CC4:Skyrim.esm").ToNullableLink<IDialogResponsesGetter>(),
+                        LinkTo = [
+                            Skyrim.DialogTopic.DB01MiscGuardPlayerCiceroFramed1,
+                            Skyrim.DialogTopic.DB01MiscGuardPlayerCiceroFramed2,
+                            Skyrim.DialogTopic.DB01MiscGuardPlayerCiceroFramed3
+                        ]
                     });
 
                 }
@@ -249,14 +248,12 @@ namespace HowHardIsThisPersuasionCheck
                 {
                     var baseResponse = grup.Find(r => r.FormKey == FormKey.Factory("060652:Skyrim.esm"));
                     baseResponse!.Conditions.Add(ConstructSpeech(Skyrim.Global.SpeechEasy));
-                    var newResponse = new DialogResponses(patchMod)
+                    grup.Insert(grup.IndexOf(baseResponse) + 1, new DialogResponses(patchMod)
                     {
-                        ResponseData = FormKey.Factory("0E0CC4:Skyrim.esm").ToNullableLink<IDialogResponsesGetter>(),
-                        Flags = new DialogResponseFlags(),
-                        Conditions = [baseResponse.Conditions[0]]
-                    };
-                    newResponse.Flags.Flags = DialogResponses.Flag.Goodbye;
-                    grup.Add(newResponse);
+                        Conditions = [baseResponse.Conditions[0]],
+                        Flags = new DialogResponseFlags() { Flags = DialogResponses.Flag.Goodbye },
+                        ResponseData = FormKey.Factory("0E0CC4:Skyrim.esm").ToNullableLink<IDialogResponsesGetter>()
+                    });
                 }
                 if (record.Equals(Skyrim.DialogTopic.DB01MiscLoreiusHelpCiceroResponseb))
                 {
@@ -264,17 +261,17 @@ namespace HowHardIsThisPersuasionCheck
                     record.Name = baseResponse!.Prompt;
                     baseResponse.Prompt = null;
                     baseResponse.Conditions.Add(ConstructSpeech(Skyrim.Global.SpeechEasy));
-                    var newResponse = new DialogResponses(patchMod)
+                    grup.Insert(grup.IndexOf(baseResponse) + 1, new DialogResponses(patchMod)
                     {
-                        ResponseData = FormKey.Factory("0E0CC4:Skyrim.esm").ToNullableLink<IDialogResponsesGetter>(),
-                        Flags = new DialogResponseFlags(),
                         Conditions = [baseResponse.Conditions[0]],
-                        LinkTo = [Skyrim.DialogTopic.DB01MiscLoreiusScrewCiceroYes,
-                        Skyrim.DialogTopic.DB01MiscLoreiusScrewCiceroNo,
-                        Skyrim.DialogTopic.DB01MiscLoreiusHelpCiceroResponseb]
-                    };
-                    newResponse.Flags.Flags = DialogResponses.Flag.Goodbye;
-                    grup.Add(newResponse);
+                        Flags = new DialogResponseFlags() { Flags = DialogResponses.Flag.Goodbye },
+                        ResponseData = FormKey.Factory("0E0CC4:Skyrim.esm").ToNullableLink<IDialogResponsesGetter>(),
+                        LinkTo = [
+                            Skyrim.DialogTopic.DB01MiscLoreiusScrewCiceroYes,
+                            Skyrim.DialogTopic.DB01MiscLoreiusScrewCiceroNo,
+                            Skyrim.DialogTopic.DB01MiscLoreiusHelpCiceroResponseb
+                        ]
+                    });
                 }
                 if (record.Equals(Skyrim.DialogTopic.DB02Captive3Persuade))
                 {
@@ -284,7 +281,6 @@ namespace HowHardIsThisPersuasionCheck
                     baseResponse.Conditions.Add(ConstructSpeech(Skyrim.Global.SpeechAverage));
                     grup.Insert(grup.IndexOf(baseResponse) + 1, new DialogResponses(patchMod)
                     {
-                        Flags = new DialogResponseFlags(),
                         Conditions = [baseResponse.Conditions[0]],
                         ResponseData = FormKey.Factory("0E0CC5:Skyrim.esm").ToNullableLink<IDialogResponsesGetter>(),
                         LinkTo = [Skyrim.DialogTopic.DB02Captive3Intimidate, Skyrim.DialogTopic.DB02Captive3Persuade]
@@ -298,7 +294,6 @@ namespace HowHardIsThisPersuasionCheck
                     baseResponse.Conditions.Add(ConstructSpeech(Skyrim.Global.SpeechAverage));
                     grup.Insert(grup.IndexOf(baseResponse) + 1, new DialogResponses(patchMod)
                     {
-                        Flags = new DialogResponseFlags(),
                         Conditions = [baseResponse.Conditions[0]],
                         ResponseData = FormKey.Factory("0E0CC4:Skyrim.esm").ToNullableLink<IDialogResponsesGetter>(),
                         LinkTo = [Skyrim.DialogTopic.DB02Captive2Intimidate, Skyrim.DialogTopic.DB02Captive2Persuade]
@@ -312,7 +307,6 @@ namespace HowHardIsThisPersuasionCheck
                     baseResponse.Conditions.Add(ConstructSpeech(Skyrim.Global.SpeechAverage));
                     grup.Insert(grup.IndexOf(baseResponse) + 1, new DialogResponses(patchMod)
                     {
-                        Flags = new DialogResponseFlags(),
                         Conditions = [baseResponse.Conditions[0]],
                         ResponseData = FormKey.Factory("0E0CC3:Skyrim.esm").ToNullableLink<IDialogResponsesGetter>(),
                         LinkTo = [Skyrim.DialogTopic.DB02Captive1Intimidate, Skyrim.DialogTopic.DB02Captive1Persuade]
@@ -330,12 +324,14 @@ namespace HowHardIsThisPersuasionCheck
                     var newResponse = new DialogResponses(patchMod)
                     {
                         VirtualMachineAdapter = baseResponse.VirtualMachineAdapter,
-                        Flags = new DialogResponseFlags(),
+                        Flags = new DialogResponseFlags()
+                        {
+                            Flags = DialogResponses.Flag.Goodbye
+                        },
                         ResponseData = FormKey.Factory("0E0CBC:Skyrim.esm").ToNullableLink<IDialogResponsesGetter>(),
                         Conditions = [baseResponse.Conditions[0], new ConditionFloat{
                         Data = new GetIntimidateSuccessConditionData { RunOnType = RunOnType.Subject }, CompareOperator = CompareOperator.EqualTo, ComparisonValue = 1}]
                     };
-                    newResponse.Flags.Flags = DialogResponses.Flag.Goodbye;
                     baseResponse.VirtualMachineAdapter = null;
                     grup.Insert(grup.IndexOf(baseResponse) + 1, newResponse);
                 }
