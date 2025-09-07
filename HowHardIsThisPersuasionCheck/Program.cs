@@ -361,7 +361,7 @@ namespace HowHardIsThisPersuasionCheck
                 }
                 if (record.Equals(Skyrim.DialogTopic.DialogueWhiterunGuardGateStopPersuade))
                 {
-                    var baseResponse = grup.Find(r => r.FormKey.ID.ToString() == "000D1981");
+                    var baseResponse = grup.Find(r => r.FormKey == FormKey.Factory("0D1981:Skyrim.esm"));
                     baseResponse!.Conditions.Add(ConstructSpeech(Skyrim.Global.SpeechAverage));
                     baseResponse!.Flags!.Flags |= DialogResponses.Flag.SayOnce;
                     grup.Insert(grup.IndexOf(baseResponse) + 1, new DialogResponses(patchMod)
