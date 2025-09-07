@@ -179,6 +179,8 @@ namespace HowHardIsThisPersuasionCheck
             //records.ForEach(record => Console.WriteLine(record.EditorID));
             foreach (var recordGetter in records)
             {
+                Console.WriteLine(recordGetter.EditorID);
+                Console.WriteLine(recordGetter.FormKey);
                 var record = patchMod.DialogTopics.GetOrAddAsOverride(recordGetter);
                 var name = record.Name?.String;
                 record.Responses.Add(recordGetter.Responses.Select(r => r.DeepCopy()));
