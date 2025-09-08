@@ -191,10 +191,6 @@ namespace HowHardIsThisPersuasionCheck
                         .ToList()
             );
             Console.WriteLine($"Found {records.Count} records to be patched");
-            //records.ForEach(record => Console.WriteLine(record.EditorID));
-
-            //subrecords.Values.ForEach(r => Console.WriteLine(r.Count));
-
             var dialCounts = records.Select(r => r.Responses.Count);
             Console.WriteLine(dialCounts.Sum());
             var counts = subrecords.Values.Select(r => r.Count);
@@ -207,7 +203,6 @@ namespace HowHardIsThisPersuasionCheck
                 record.Responses.Clear();
                 record.Responses.Add(subrecordsGetter.Select(r => r.DeepCopy()));
                 var name = record.Name?.String;
-                record.Responses.Add(recordGetter.Responses.Select(r => r.DeepCopy()));
                 var grup = record.Responses;
 
                 if (record.Equals(Skyrim.DialogTopic.MG04MirabelleAugurInfoBranchTopic))
