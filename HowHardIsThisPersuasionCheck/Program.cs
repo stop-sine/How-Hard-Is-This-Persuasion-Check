@@ -176,6 +176,7 @@ namespace HowHardIsThisPersuasionCheck
             var patchMod = state.PatchMod;
             var allRecords = state.LoadOrder.PriorityOrder.DialogTopic().WinningOverrides();
             var records = allRecords.Where(RecordFilter).ToList();
+            var subrecords = state.LoadOrder.PriorityOrder.DialogResponses().WinningOverrides();
             Console.WriteLine($"Found {records.Count} records to be patched");
             //records.ForEach(record => Console.WriteLine(record.EditorID));
             foreach (var recordGetter in records)
