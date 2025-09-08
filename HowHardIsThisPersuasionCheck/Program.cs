@@ -183,6 +183,7 @@ namespace HowHardIsThisPersuasionCheck
                 Console.WriteLine(recordGetter.FormKey);
                 var record = patchMod.DialogTopics.GetOrAddAsOverride(recordGetter);
                 var name = record.Name?.String;
+                Console.WriteLine(recordGetter.Responses.Count);
                 record.Responses.Add(recordGetter.Responses.Select(r => r.DeepCopy()));
                 var grup = record.Responses;
                 Console.WriteLine(grup.Count);
