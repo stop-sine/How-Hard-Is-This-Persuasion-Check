@@ -185,6 +185,8 @@ namespace HowHardIsThisPersuasionCheck
                 var name = record.Name?.String;
                 record.Responses.Add(recordGetter.Responses.Select(r => r.DeepCopy()));
                 var grup = record.Responses;
+                Console.WriteLine(grup.Count);
+                grup.ForEach(i => Console.WriteLine(i.FormKey));
                 if (record.Equals(Skyrim.DialogTopic.MG04MirabelleAugurInfoBranchTopic))
                 {
                     var baseResponse = grup.Find(r => r.FormKey == FormKey.Factory("04FA11:Skyrim.esm"));
@@ -362,7 +364,7 @@ namespace HowHardIsThisPersuasionCheck
                 if (record.Equals(Skyrim.DialogTopic.DialogueWhiterunGuardGateStopPersuade))
                 {
                     var baseResponse = grup.Find(r => r.FormKey == FormKey.Factory("0D1981:Skyrim.esm"));
-                    grup.ForEach(i => Console.WriteLine(i.FormKey));
+
                     baseResponse?.Conditions.Add(ConstructSpeech(Skyrim.Global.SpeechAverage));
                     baseResponse!.Flags!.Flags |= DialogResponses.Flag.SayOnce;
                     grup.Insert(grup.IndexOf(baseResponse) + 1, new DialogResponses(patchMod)
