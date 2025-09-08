@@ -169,26 +169,47 @@ namespace HowHardIsThisPersuasionCheck
             || BrokenRecords.Contains(record.ToLink());
         }
 
+        public static void SubrecordFilter(IDialogTopicGetter record, IEnumerable<IModContext<ISkyrimMod, ISkyrimModGetter, IDialogResponses, IDialogResponsesGetter>> contexts)
+        {
+            var subrecords = contexts.Where(c => c.Parent!.Record.Cast<IDialogTopicGetter>().FormKey == record.FormKey).Select(c => c.Record).ToList();
+
+        }
+
         public static void RunPatch(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
 
             var cache = state.LinkCache;
             var patchMod = state.PatchMod;
             var allRecords = state.LoadOrder.PriorityOrder.DialogTopic().WinningOverrides();
+            var allSubrecords = state.LoadOrder.PriorityOrder.DialogResponses().WinningContextOverrides(cache);
             var records = allRecords.Where(RecordFilter).ToList();
-            var subrecords = state.LoadOrder.PriorityOrder.DialogResponses().WinningOverrides();
+            var subrecords = records.ToDictionary(
+                r => r.FormKey,
+                r => allSubrecords
+                        .Where(c => c.Parent!.Record.Cast<IDialogTopicGetter>().FormKey == r.FormKey)
+                        .Select(c => c.Record)
+                        .ToList()
+            );
             Console.WriteLine($"Found {records.Count} records to be patched");
             //records.ForEach(record => Console.WriteLine(record.EditorID));
+
+            //subrecords.Values.ForEach(r => Console.WriteLine(r.Count));
+
+            var dialCounts = records.Select(r => r.Responses.Count);
+            Console.WriteLine(dialCounts.Sum());
+            var counts = subrecords.Values.Select(r => r.Count);
+            Console.WriteLine(counts.Sum());
             foreach (var recordGetter in records)
             {
-                Console.WriteLine(recordGetter.FormKey);
+                //Console.WriteLine(recordGetter.FormKey);
+                var subrecordsGetter = subrecords[recordGetter.FormKey];
                 var record = patchMod.DialogTopics.GetOrAddAsOverride(recordGetter);
+                record.Responses.Clear();
+                record.Responses.Add(subrecordsGetter.Select(r => r.DeepCopy()));
                 var name = record.Name?.String;
-                Console.WriteLine(recordGetter.Responses.Count);
                 record.Responses.Add(recordGetter.Responses.Select(r => r.DeepCopy()));
                 var grup = record.Responses;
-                Console.WriteLine(grup.Count);
-                grup.ForEach(i => Console.WriteLine(i.FormKey));
+
                 if (record.Equals(Skyrim.DialogTopic.MG04MirabelleAugurInfoBranchTopic))
                 {
                     var baseResponse = grup.Find(r => r.FormKey == FormKey.Factory("04FA11:Skyrim.esm"));
@@ -424,6 +445,7 @@ namespace HowHardIsThisPersuasionCheck
                 var speechGrup = grup.Where(SpeechCheckFilter);
                 foreach (var info in grup)
                 {
+                    //Console.WriteLine(info.FormKey);
                     if (SpeechCheckFilter(info))
                     {
                         var speech = info.Conditions.Find(SpeechConditionFilter);
@@ -444,7 +466,7 @@ namespace HowHardIsThisPersuasionCheck
                             info.Prompt.String = info.Prompt.String.Replace("(Persuade)", $"(Persuade: {GetSpeechValue(speech!)})");
                         }
                     }
-                    if (info.PreviousDialog.IsNull && grup.First() != info)
+                    if (info.PreviousDialog.IsNull && grup.IndexOf(info) != 0)
                         info.PreviousDialog = grup[grup.IndexOf(info) - 1].ToNullableLink();
                     if (info.FormKey.Equals(FormKey.Factory("027F63:Skyrim.esm")))
                         info.Conditions.RemoveAt(0);
@@ -460,8 +482,9 @@ namespace HowHardIsThisPersuasionCheck
             foreach (var recordGetter in records)
             {
                 var record = patchMod.DialogTopics.GetOrAddAsOverride(recordGetter);
+                var subrecordsGetter = subrecords[recordGetter.FormKey];
                 var grup = record.Responses;
-                foreach (var info in recordGetter.Responses)
+                foreach (var info in subrecordsGetter)
                     if (grup.Contains(info.DeepCopy()))
                         grup.Remove(info.DeepCopy());
             }
