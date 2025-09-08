@@ -171,6 +171,7 @@ namespace HowHardIsThisPersuasionCheck
 
         public static void RunPatch(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
+
             var cache = state.LinkCache;
             var patchMod = state.PatchMod;
             var allRecords = state.LoadOrder.PriorityOrder.DialogTopic().WinningOverrides();
@@ -179,8 +180,6 @@ namespace HowHardIsThisPersuasionCheck
             //records.ForEach(record => Console.WriteLine(record.EditorID));
             foreach (var recordGetter in records)
             {
-                Console.WriteLine(recordGetter.EditorID);
-                Console.WriteLine(recordGetter.FormKey);
                 var record = patchMod.DialogTopics.GetOrAddAsOverride(recordGetter);
                 var name = record.Name?.String;
                 record.Responses.Add(recordGetter.Responses.Select(r => r.DeepCopy()));
@@ -419,7 +418,6 @@ namespace HowHardIsThisPersuasionCheck
                 var speechGrup = grup.Where(SpeechCheckFilter);
                 foreach (var info in grup)
                 {
-                    Console.WriteLine(info.FormKey);
                     if (SpeechCheckFilter(info))
                     {
                         var speech = info.Conditions.Find(SpeechConditionFilter);

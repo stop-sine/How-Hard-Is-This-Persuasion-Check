@@ -5,8 +5,16 @@
       "type": "coreclr",
       "request": "launch",
       "name": "Launch HowHardIsThisPersuasionCheck",
-      "program": "${workspaceFolder}/HowHardIsThisPersuasionCheck/bin/Debug/net8.0/HowHardIsThisPersuasionCheck.dll",
-      "preLaunchTask": "build"
+      "program": "${workspaceFolder}/HowHardIsThisPersuasionCheck/bin/Debug/net9.0/HowHardIsThisPersuasionCheck.dll",
+      "preLaunchTask": "build",
+      "args": [
+        "run-patcher",
+        "--DataFolderPath",
+        "C:\\Users\\johnr\\AppData\\Local\\ModOrganizer\\Skyrim SE\\mods",
+        "--LoadOrderFilePath",
+        "C:\\Users\\johnr\\AppData\\Local\\ModOrganizer\\Skyrim SE\\profiles\\SandboxPlugins.txt"
+      ]
     }
   ]
 }
+
