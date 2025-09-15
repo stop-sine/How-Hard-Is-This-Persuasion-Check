@@ -175,35 +175,47 @@ namespace HowHardIsThisPersuasionCheck
 
         }
 
+        public static List<IDialogResponsesGetter> CollectResponses(IEnumerable<IDialogTopicGetter> dialCollection)
+        {
+            var infoCollection = new Dictionary<FormKey, IDialogResponsesGetter>();
+            foreach (var dial in dialCollection.Reverse())
+                foreach (var info in dial.Responses)
+                    if (!infoCollection.TryAdd(info.FormKey, info))
+                        infoCollection[info.FormKey] = info;
+            return [.. infoCollection.Values];
+        }
+
         public static void RunPatch(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
 
             var cache = state.LinkCache;
             var patchMod = state.PatchMod;
-            var allRecords = state.LoadOrder.PriorityOrder.DialogTopic().WinningOverrides();
-            var allSubrecords = state.LoadOrder.PriorityOrder.DialogResponses().WinningContextOverrides(cache);
-            var records = allRecords.Where(RecordFilter).ToList();
-            var subrecords = records.ToDictionary(
-                r => r.FormKey,
-                r => allSubrecords
-                        .Where(c => c.Parent!.Record.Cast<IDialogTopicGetter>().FormKey == r.FormKey)
-                        .Select(c => c.Record)
-                        .ToList()
+            //var allRecords = state.LoadOrder.PriorityOrder.DialogTopic().WinningOverrides();
+            var allRecords = state.LoadOrder.PriorityOrder.DialogTopic().WinningOverrides().Select(r => r.FormKey.ToLinkGetter<IDialogTopicGetter>());
+            var dialRecords = allRecords.Where(r => RecordFilter(r.Resolve(cache))).ToList();
+            var subrecords = dialRecords.ToDictionary(
+                d => d.Resolve(cache).FormKey,
+                d => CollectResponses(d.ResolveAll(cache))
             );
-            Console.WriteLine($"Found {records.Count} records to be patched");
-            var dialCounts = records.Select(r => r.Responses.Count);
+
+            Console.WriteLine($"Found {state.LoadOrder.PriorityOrder.Count()} plugins in load order");
+            Console.WriteLine($"Found {dialRecords.Count} records to be patched");
+            var dialCounts = dialRecords.Select(r => r.Resolve(cache).Responses.Count);
             Console.WriteLine(dialCounts.Sum());
             var counts = subrecords.Values.Select(r => r.Count);
             Console.WriteLine(counts.Sum());
-            foreach (var recordGetter in records)
+            foreach (var link in dialRecords)
             {
-                //Console.WriteLine(recordGetter.FormKey);
-                var subrecordsGetter = subrecords[recordGetter.FormKey];
-                var record = patchMod.DialogTopics.GetOrAddAsOverride(recordGetter);
+                var subrecordsGetter = subrecords[link.FormKey];
+                var record = patchMod.DialogTopics.GetOrAddAsOverride(link.Resolve(cache));
                 record.Responses.Clear();
                 record.Responses.Add(subrecordsGetter.Select(r => r.DeepCopy()));
                 var name = record.Name?.String;
                 var grup = record.Responses;
+
+                if (record.Equals(Skyrim.DialogTopic.DA15Convince))
+                    foreach (var x in grup)
+                        Console.WriteLine(x.FormKey);
 
                 if (record.Equals(Skyrim.DialogTopic.MG04MirabelleAugurInfoBranchTopic))
                 {
@@ -474,10 +486,10 @@ namespace HowHardIsThisPersuasionCheck
                         info.Prompt = null;
                 }
             }
-            foreach (var recordGetter in records)
+            foreach (var link in dialRecords)
             {
-                var record = patchMod.DialogTopics.GetOrAddAsOverride(recordGetter);
-                var subrecordsGetter = subrecords[recordGetter.FormKey];
+                var record = patchMod.DialogTopics.GetOrAddAsOverride(link.Resolve(cache));
+                var subrecordsGetter = subrecords[link.FormKey];
                 var grup = record.Responses;
                 foreach (var info in subrecordsGetter)
                     if (grup.Contains(info.DeepCopy()))
