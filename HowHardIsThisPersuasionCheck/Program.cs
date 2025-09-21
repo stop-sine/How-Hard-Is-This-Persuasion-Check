@@ -26,6 +26,7 @@ using Noggog.StructuredStrings.CSharp;
 using CommandLine;
 using System.ComponentModel.Design;
 using Mutagen.Bethesda.Plugins.Analysis;
+using System.Text.RegularExpressions;
 
 namespace HowHardIsThisPersuasionCheck
 {
@@ -84,9 +85,20 @@ namespace HowHardIsThisPersuasionCheck
             return SpeechValues[condition.Cast<IConditionGlobal>().ComparisonValue];
         }
 
-        public static IConditionGetter? GetSpeechCondition(IDialogResponsesGetter? info)
+        public static string GetSpeechValue(DialogResponses info)
         {
-            return info?.Conditions.FirstOrDefault(c => c is IConditionGlobalGetter global && SpeechGlobals.Contains(global.ComparisonValue.FormKey));
+            var condition = info.Conditions.Find(SpeechFilter);
+            return SpeechValues[condition.Cast<ConditionGlobal>().ComparisonValue];
+        }
+
+        public static IConditionGetter? GetSpeechCondition(IDialogResponsesGetter info)
+        {
+            return info.Conditions.ToList().Find(SpeechFilter);
+        }
+
+        public static Condition? GetSpeechCondition(DialogResponses info)
+        {
+            return info.Conditions.ToList().Find(SpeechFilter);
         }
 
         public static ConditionGlobal ConstructSpeech(IFormLink<IGlobalGetter> speechDifficulty)
@@ -94,7 +106,7 @@ namespace HowHardIsThisPersuasionCheck
             var speech = new ConditionGlobal
             {
                 Data = new GetActorValueConditionData { RunOnType = RunOnType.Reference, Reference = Skyrim.PlayerRef, ActorValue = ActorValue.Speech },
-                CompareOperator = CompareOperator.GreaterThan,
+                CompareOperator = CompareOperator.GreaterThanOrEqualTo,
                 ComparisonValue = speechDifficulty
             };
             return speech;
@@ -115,64 +127,60 @@ namespace HowHardIsThisPersuasionCheck
                                 },
                 },
                 CompareOperator = CompareOperator.EqualTo,
-                ComparisonValue = 1
+                ComparisonValue = 1,
+                Flags = Flag.OR
             };
             if (anti)
                 amulet.CompareOperator = CompareOperator.NotEqualTo;
             return amulet;
         }
 
-        public static bool SpeechConditionFilter(IConditionGetter condition)
+        public static bool SpeechFilter(IConditionGetter condition)
         {
-            return condition is IConditionGlobalGetter { ComparisonValue: var value }
-            && SpeechGlobals.Contains(value);
+            return condition is IConditionGlobalGetter { Data: IGetActorValueConditionDataGetter { ActorValue: ActorValue.Speech } }
+            || condition is IConditionFloatGetter { Data: IGetActorValueConditionDataGetter { ActorValue: ActorValue.Speech } };
         }
 
-        public static bool SpeechCheckFilter(IDialogResponsesGetter subrecord)
+        public static bool SpeechFilter(IDialogResponsesGetter subrecord)
         {
-            return subrecord.Conditions.Any(SpeechConditionFilter);
+            return subrecord.Conditions.Any(SpeechFilter);
         }
 
-        public static bool SpeechPromptFilter(IDialogResponsesGetter subrecord)
+        public static bool TextFilter(IDialogResponsesGetter subrecord)
         {
             return subrecord.Prompt?.String?.Contains("(Persuade)") ?? false;
         }
 
-        public static bool SpeechNameFilter(IDialogTopicGetter record)
+        public static bool TextFilter(IDialogTopicGetter record)
         {
             return record.Name?.String?.Contains("(Persuade)") ?? false;
         }
 
-        public static bool AmuletConditionFilter(IConditionGetter condition)
+
+        public static bool AmuletFilter(IConditionGetter condition)
         {
             return condition is IConditionFloatGetter { Data: IGetEquippedConditionDataGetter { ItemOrList.Link: var link } } && link.Equals(Skyrim.FormList.TGAmuletofArticulationList);
         }
 
         public static bool AmuletFilter(IDialogResponsesGetter subrecord)
         {
-            return subrecord.Conditions.Any(AmuletConditionFilter);
+            return subrecord.Conditions.Any(AmuletFilter);
         }
 
-        public static bool DifferentSpeechChecksFilter(IDialogTopicGetter record)
+        public static bool DifferentSpeechChecksFilter(DialogTopic record)
         {
-            var conditions = record.Responses.Where(SpeechCheckFilter).Select(GetSpeechCondition);
+            var conditions = record.Responses.Where(SpeechFilter).Select(GetSpeechCondition);
             var values = conditions.Select(GetSpeechValue!);
             return values.Distinct().Count() > 1;
-
         }
 
         public static bool RecordFilter(IDialogTopicGetter record)
         {
-            return SpeechNameFilter(record)
-            || record.Responses.Any(SpeechPromptFilter)
-            || record.Responses.Any(SpeechCheckFilter)
-            || BrokenRecords.Contains(record.ToLink());
-        }
-
-        public static void SubrecordFilter(IDialogTopicGetter record, IEnumerable<IModContext<ISkyrimMod, ISkyrimModGetter, IDialogResponses, IDialogResponsesGetter>> contexts)
-        {
-            var subrecords = contexts.Where(c => c.Parent!.Record.Cast<IDialogTopicGetter>().FormKey == record.FormKey).Select(c => c.Record).ToList();
-
+            return (TextFilter(record)
+            || record.Responses.Any(TextFilter)
+            || record.Responses.Any(SpeechFilter)
+            || BrokenRecords.Contains(record.ToLink()))
+            && record.FormKey != FormKey.Factory("02BDDD:Skyrim.esm");
         }
 
         public static List<IDialogResponsesGetter> CollectResponses(IEnumerable<IDialogTopicGetter> dialCollection)
@@ -185,39 +193,91 @@ namespace HowHardIsThisPersuasionCheck
             return [.. infoCollection.Values];
         }
 
+
+        public static Condition PatchSpeechCondition(Condition condition)
+        {
+            if (condition is ConditionFloat floatCondition)
+            {
+                ConditionGlobal? globalCondition = floatCondition.ComparisonValue switch
+                {
+                    10 => ConstructSpeech(Skyrim.Global.SpeechVeryEasy),
+                    25 => ConstructSpeech(Skyrim.Global.SpeechEasy),
+                    50 => ConstructSpeech(Skyrim.Global.SpeechAverage),
+                    75 => ConstructSpeech(Skyrim.Global.SpeechHard),
+                    100 => ConstructSpeech(Skyrim.Global.SpeechVeryHard),
+                    _ => null
+                };
+                if (globalCondition is not null)
+                    condition = globalCondition;
+            }
+            condition.Data.RunOnType = RunOnType.Reference;
+            condition.Data.Reference = Skyrim.PlayerRef;
+            condition.Flags = Flag.OR;
+            return condition;
+        }
+
+        public static Mutagen.Bethesda.Strings.TranslatedString PatchText(Mutagen.Bethesda.Strings.TranslatedString text, string speechDifficulty)
+        {
+            if (text.String!.Contains("(Persuade)", StringComparison.OrdinalIgnoreCase))
+                text = text.String.Replace("(Persuade)", $"(Persuade: {speechDifficulty})", StringComparison.OrdinalIgnoreCase);
+            else if (!text.String!.Contains("(Intimidate)", StringComparison.OrdinalIgnoreCase) &&
+                 !(text.String!.Contains("gold)", StringComparison.OrdinalIgnoreCase) ||
+                   text.String!.Contains("septim)", StringComparison.OrdinalIgnoreCase)))
+                text += $" (Persuade: {speechDifficulty})";
+            return text;
+        }
+
+        public static bool MatchByConditions(DialogResponses a, DialogResponses b)
+        {
+            var conditionsA = a.Conditions.Where(c => !SpeechFilter(c) && !AmuletFilter(c)).ToList();
+            var conditionsB = b.Conditions.Where(c => !SpeechFilter(c) && !AmuletFilter(c)).ToList();
+            return conditionsA.Intersect(conditionsB).Any();
+        }
+
+        public static void PatchPrompts(ExtendedList<DialogResponses> grup)
+        {
+            var infoCollection = grup.Where(r => r.Prompt?.String is { Length: > 0 } && SpeechFilter(r));
+            foreach (var info in infoCollection)
+            {
+                var promptText = info.Prompt!.String!;
+                var matchingInfo = grup.Where(r => r.Prompt?.String == promptText);
+                foreach (var match in matchingInfo)
+                    match.Prompt = PatchText(match.Prompt!, GetSpeechValue(info));
+            }
+        }
+
+        public static void SortConditions(ExtendedList<Condition> conditions)
+        {
+            if (conditions.Any(SpeechFilter) && conditions.Any(AmuletFilter))
+            {
+                var speech = conditions.Find(SpeechFilter)!;
+                conditions.RemoveAt(conditions.IndexOf(speech));
+                conditions.Add(speech);
+                var amulet = conditions.Find(AmuletFilter)!;
+                conditions.RemoveAt(conditions.IndexOf(amulet));
+                conditions.Add(amulet);
+            }
+        }
+
         public static void RunPatch(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
-
             var cache = state.LinkCache;
             var patchMod = state.PatchMod;
-            //var allRecords = state.LoadOrder.PriorityOrder.DialogTopic().WinningOverrides();
-            var allRecords = state.LoadOrder.PriorityOrder.DialogTopic().WinningOverrides().Select(r => r.FormKey.ToLinkGetter<IDialogTopicGetter>());
-            var dialRecords = allRecords.Where(r => RecordFilter(r.Resolve(cache))).ToList();
-            var subrecords = dialRecords.ToDictionary(
-                d => d.Resolve(cache).FormKey,
-                d => CollectResponses(d.ResolveAll(cache))
+            var records = state.LoadOrder.PriorityOrder.DialogTopic().WinningOverrides().Where(RecordFilter).ToList();
+            var subrecords = records.ToDictionary(
+                d => d.FormKey,
+                d => CollectResponses(d.FormKey.ToLinkGetter<IDialogTopicGetter>().ResolveAll(cache))
             );
-
-            Console.WriteLine($"Found {state.LoadOrder.PriorityOrder.Count()} plugins in load order");
-            Console.WriteLine($"Found {dialRecords.Count} records to be patched");
-            var dialCounts = dialRecords.Select(r => r.Resolve(cache).Responses.Count);
-            Console.WriteLine(dialCounts.Sum());
-            var counts = subrecords.Values.Select(r => r.Count);
-            Console.WriteLine(counts.Sum());
-            foreach (var link in dialRecords)
+            Console.WriteLine($"Found {records.Count} records to be patched");
+            foreach (var record in records)
             {
-                var subrecordsGetter = subrecords[link.FormKey];
-                var record = patchMod.DialogTopics.GetOrAddAsOverride(link.Resolve(cache));
-                record.Responses.Clear();
-                record.Responses.Add(subrecordsGetter.Select(r => r.DeepCopy()));
-                var name = record.Name?.String;
-                var grup = record.Responses;
+                var subrecordsGetter = subrecords[record.FormKey];
+                var dial = patchMod.DialogTopics.GetOrAddAsOverride(record);
+                dial.Responses.Clear();
+                dial.Responses.Add(subrecordsGetter.Select(r => r.DeepCopy()));
+                var grup = dial.Responses;
 
-                if (record.Equals(Skyrim.DialogTopic.DA15Convince))
-                    foreach (var x in grup)
-                        Console.WriteLine(x.FormKey);
-
-                if (record.Equals(Skyrim.DialogTopic.MG04MirabelleAugurInfoBranchTopic))
+                if (dial.Equals(Skyrim.DialogTopic.MG04MirabelleAugurInfoBranchTopic))
                 {
                     var baseResponse = grup.Find(r => r.FormKey == FormKey.Factory("04FA11:Skyrim.esm"));
                     grup.Insert(grup.IndexOf(baseResponse!) + 1, new DialogResponses(patchMod)
@@ -227,12 +287,12 @@ namespace HowHardIsThisPersuasionCheck
                         ResponseData = FormKey.Factory("0E0CC4:Skyrim.esm").ToNullableLink<IDialogResponsesGetter>()
                     });
                 }
-                if (record.Equals(Skyrim.DialogTopic.DB01MiscGuardPlayerCiceroFramed3))
+                if (dial.Equals(Skyrim.DialogTopic.DB01MiscGuardPlayerCiceroFramed3))
                 {
                     var baseResponse = grup.Find(r => r.FormKey == FormKey.Factory("0556FA:Skyrim.esm"));
-                    record.Name = baseResponse!.Prompt;
+                    dial.Name = baseResponse!.Prompt;
                     baseResponse.Prompt = null;
-                    baseResponse.Conditions.Add(ConstructSpeech(Skyrim.Global.SpeechVeryEasy));
+                    baseResponse.Conditions.Add(ConstructSpeech(Skyrim.Global.SpeechEasy));
                     grup.Insert(grup.IndexOf(baseResponse) + 1, new DialogResponses(patchMod)
                     {
                         Conditions = [baseResponse.Conditions[0], baseResponse.Conditions[1]],
@@ -244,12 +304,12 @@ namespace HowHardIsThisPersuasionCheck
                         ]
                     });
                 }
-                if (record.Equals(Skyrim.DialogTopic.DB01MiscGuardPlayerCiceroFramed2))
+                if (dial.Equals(Skyrim.DialogTopic.DB01MiscGuardPlayerCiceroFramed2))
                 {
                     var baseResponse = grup.Find(r => r.FormKey == FormKey.Factory("0556F8:Skyrim.esm"));
-                    record.Name = baseResponse!.Prompt;
+                    dial.Name = baseResponse!.Prompt;
                     baseResponse.Prompt = null;
-                    baseResponse.Conditions.Add(ConstructSpeech(Skyrim.Global.SpeechVeryEasy));
+                    baseResponse.Conditions.Add(ConstructSpeech(Skyrim.Global.SpeechAverage));
                     grup.Insert(grup.IndexOf(baseResponse) + 1, new DialogResponses(patchMod)
                     {
                         ResponseData = FormKey.Factory("0E0CC4:Skyrim.esm").ToNullableLink<IDialogResponsesGetter>(),
@@ -260,12 +320,12 @@ namespace HowHardIsThisPersuasionCheck
                         Skyrim.DialogTopic.DB01MiscGuardPlayerCiceroFramed3]
                     });
                 }
-                if (record.Equals(Skyrim.DialogTopic.DB01MiscGuardPlayerCiceroFramed1))
+                if (dial.Equals(Skyrim.DialogTopic.DB01MiscGuardPlayerCiceroFramed1))
                 {
                     var baseResponse = grup.Find(r => r.FormKey == FormKey.Factory("0556F7:Skyrim.esm"));
-                    record.Name = baseResponse!.Prompt;
+                    dial.Name = baseResponse!.Prompt;
                     baseResponse.Prompt = null;
-                    baseResponse.Conditions.Add(ConstructSpeech(Skyrim.Global.SpeechAverage));
+                    baseResponse.Conditions.Add(ConstructSpeech(Skyrim.Global.SpeechEasy));
                     grup.Insert(grup.IndexOf(baseResponse) + 1, new DialogResponses(patchMod)
                     {
                         Conditions = [baseResponse.Conditions[0], baseResponse.Conditions[1]],
@@ -278,7 +338,22 @@ namespace HowHardIsThisPersuasionCheck
                     });
 
                 }
-                if (record.Equals(Skyrim.DialogTopic.DA11IntroVerulusPersuade))
+                if (dial.Equals(Skyrim.DialogTopic.MQ201PartyOndolomarDistractionYes))
+                {
+                    var baseResponse = grup.Find(r => r.FormKey == FormKey.Factory("067EC6:Skyrim.esm"))!;
+                    baseResponse.VirtualMachineAdapter!.Scripts[0].Properties.Add(new ScriptObjectProperty
+                    {
+                        Name = "pFDS",
+                        Flags = ScriptProperty.Flag.Edited,
+                        Object = Skyrim.Quest.DialogueFavorGeneric
+                    });
+                    baseResponse.VirtualMachineAdapter!.ScriptFragments!.OnBegin = new ScriptFragment
+                    {
+                        ScriptName = "TIF__00067EC6",
+                        FragmentName = "Fragment_1"
+                    };
+                }
+                if (dial.Equals(Skyrim.DialogTopic.DA11IntroVerulusPersuade))
                 {
                     var baseResponse = grup.Find(r => r.FormKey == FormKey.Factory("060652:Skyrim.esm"));
                     baseResponse!.Conditions.Add(ConstructSpeech(Skyrim.Global.SpeechEasy));
@@ -289,10 +364,10 @@ namespace HowHardIsThisPersuasionCheck
                         ResponseData = FormKey.Factory("0E0CC4:Skyrim.esm").ToNullableLink<IDialogResponsesGetter>()
                     });
                 }
-                if (record.Equals(Skyrim.DialogTopic.DB01MiscLoreiusHelpCiceroResponseb))
+                if (dial.Equals(Skyrim.DialogTopic.DB01MiscLoreiusHelpCiceroResponseb))
                 {
                     var baseResponse = grup.Find(r => r.FormKey == FormKey.Factory("07DE91:Skyrim.esm"));
-                    record.Name = baseResponse!.Prompt;
+                    dial.Name = baseResponse!.Prompt;
                     baseResponse.Prompt = null;
                     baseResponse.Conditions.Add(ConstructSpeech(Skyrim.Global.SpeechEasy));
                     grup.Insert(grup.IndexOf(baseResponse) + 1, new DialogResponses(patchMod)
@@ -307,10 +382,10 @@ namespace HowHardIsThisPersuasionCheck
                         ]
                     });
                 }
-                if (record.Equals(Skyrim.DialogTopic.DB02Captive3Persuade))
+                if (dial.Equals(Skyrim.DialogTopic.DB02Captive3Persuade))
                 {
                     var baseResponse = grup.Find(r => r.FormKey == FormKey.Factory("09DEA6:Skyrim.esm"));
-                    record.Name = baseResponse!.Prompt;
+                    dial.Name = baseResponse!.Prompt;
                     baseResponse.Prompt = null;
                     baseResponse.Conditions.Add(ConstructSpeech(Skyrim.Global.SpeechAverage));
                     grup.Insert(grup.IndexOf(baseResponse) + 1, new DialogResponses(patchMod)
@@ -320,10 +395,10 @@ namespace HowHardIsThisPersuasionCheck
                         LinkTo = [Skyrim.DialogTopic.DB02Captive3Intimidate, Skyrim.DialogTopic.DB02Captive3Persuade]
                     });
                 }
-                if (record.Equals(Skyrim.DialogTopic.DB02Captive2Persuade))
+                if (dial.Equals(Skyrim.DialogTopic.DB02Captive2Persuade))
                 {
                     var baseResponse = grup.Find(r => r.FormKey == FormKey.Factory("09DEA1:Skyrim.esm"));
-                    record.Name = baseResponse!.Prompt;
+                    dial.Name = baseResponse!.Prompt;
                     baseResponse.Prompt = null;
                     baseResponse.Conditions.Add(ConstructSpeech(Skyrim.Global.SpeechAverage));
                     grup.Insert(grup.IndexOf(baseResponse) + 1, new DialogResponses(patchMod)
@@ -333,10 +408,10 @@ namespace HowHardIsThisPersuasionCheck
                         LinkTo = [Skyrim.DialogTopic.DB02Captive2Intimidate, Skyrim.DialogTopic.DB02Captive2Persuade]
                     });
                 }
-                if (record.Equals(Skyrim.DialogTopic.DB02Captive1Persuade))
+                if (dial.Equals(Skyrim.DialogTopic.DB02Captive1Persuade))
                 {
                     var baseResponse = grup.Find(r => r.FormKey == FormKey.Factory("09DEA2:Skyrim.esm"));
-                    record.Name = baseResponse!.Prompt;
+                    dial.Name = baseResponse!.Prompt;
                     baseResponse.Prompt = null;
                     baseResponse.Conditions.Add(ConstructSpeech(Skyrim.Global.SpeechAverage));
                     grup.Insert(grup.IndexOf(baseResponse) + 1, new DialogResponses(patchMod)
@@ -346,7 +421,85 @@ namespace HowHardIsThisPersuasionCheck
                         LinkTo = [Skyrim.DialogTopic.DB02Captive1Intimidate, Skyrim.DialogTopic.DB02Captive1Persuade]
                     });
                 }
-                if (record.Equals(Skyrim.DialogTopic.DialogueWhiterunGuardGateStopIntimidate))
+
+                if (dial.Equals(Skyrim.DialogTopic.WERJ02Persuade))
+                {
+                    var baseResponse = grup.Find(r => r.FormKey == FormKey.Factory("0B815A:Skyrim.esm"))!;
+                    baseResponse.Flags?.Flags = DialogResponses.Flag.Goodbye;
+                }
+
+                if (dial.Equals(Skyrim.DialogTopic.MQ201PartyDistractionPersuadeSiddgeir))
+                {
+                    var baseResponse = grup.Find(r => r.FormKey == FormKey.Factory("0C0809:Skyrim.esm"))!;
+                    baseResponse.VirtualMachineAdapter!.Scripts[0].Properties.Add(new ScriptObjectProperty
+                    {
+                        Name = "pFDS",
+                        Flags = ScriptProperty.Flag.Edited,
+                        Object = Skyrim.Quest.DialogueFavorGeneric
+                    });
+                    baseResponse.VirtualMachineAdapter!.ScriptFragments!.OnBegin = new ScriptFragment
+                    {
+                        ScriptName = "TIF__000C0809",
+                        FragmentName = "Fragment_2"
+                    };
+                }
+                if (dial.Equals(Skyrim.DialogTopic.MQ201PartyDistractionPersuadeIgmund))
+                {
+                    var baseResponse = grup.Find(r => r.FormKey == FormKey.Factory("0C080D:Skyrim.esm"))!;
+                    baseResponse.VirtualMachineAdapter!.Scripts[0].Properties.Add(new ScriptObjectProperty
+                    {
+                        Name = "pFDS",
+                        Flags = ScriptProperty.Flag.Edited,
+                        Object = Skyrim.Quest.DialogueFavorGeneric
+                    });
+                    baseResponse.VirtualMachineAdapter!.ScriptFragments!.OnBegin = new ScriptFragment
+                    {
+                        ScriptName = "TIF__000C080D",
+                        FragmentName = "Fragment_2"
+                    };
+                }
+                if (dial.Equals(Skyrim.DialogTopic.MQ201PartyDistractionPersuadeVittoria))
+                {
+                    var baseResponse = grup.Find(r => r.FormKey == FormKey.Factory("0665D9:Skyrim.esm"))!;
+                    baseResponse.VirtualMachineAdapter!.Scripts[0].Properties.Add(new ScriptObjectProperty
+                    {
+                        Name = "pFDS",
+                        Flags = ScriptProperty.Flag.Edited,
+                        Object = Skyrim.Quest.DialogueFavorGeneric
+                    });
+                    baseResponse.VirtualMachineAdapter!.ScriptFragments!.OnBegin = new ScriptFragment
+                    {
+                        ScriptName = "TIF__000665D9",
+                        FragmentName = "Fragment_2"
+                    };
+                }
+                if (dial.Equals(Skyrim.DialogTopic.MQ201PartyDistractionPersuadeElisif))
+                {
+                    var baseResponse = grup.Find(r => r.FormKey == FormKey.Factory("0C0813:Skyrim.esm"))!;
+                    baseResponse.VirtualMachineAdapter!.Scripts[0].Properties.Add(new ScriptObjectProperty
+                    {
+                        Name = "pFDS",
+                        Flags = ScriptProperty.Flag.Edited,
+                        Object = Skyrim.Quest.DialogueFavorGeneric
+                    });
+                    baseResponse.VirtualMachineAdapter!.ScriptFragments!.OnBegin = new ScriptFragment
+                    {
+                        ScriptName = "TIF__000C0813",
+                        FragmentName = "Fragment_2"
+                    };
+                }
+                if (dial.Equals(Skyrim.DialogTopic.DA14AskAboutStaffPersuadeTopic))
+                {
+                    var baseResponse = grup.Find(r => r.FormKey == FormKey.Factory("0C4206:Skyrim.esm"))!;
+                    baseResponse.VirtualMachineAdapter!.Scripts[0].Properties.Add(new ScriptObjectProperty
+                    {
+                        Name = "pFDS",
+                        Flags = ScriptProperty.Flag.Edited,
+                        Object = Skyrim.Quest.DialogueFavorGeneric
+                    });
+
+                }
+                if (dial.Equals(Skyrim.DialogTopic.DialogueWhiterunGuardGateStopIntimidate))
                 {
                     var baseResponse = grup.Find(r => r.FormKey == FormKey.Factory("0D197F:Skyrim.esm"));
                     baseResponse!.Conditions.Add(new ConditionFloat
@@ -369,7 +522,7 @@ namespace HowHardIsThisPersuasionCheck
                     baseResponse.VirtualMachineAdapter = null;
                     grup.Insert(grup.IndexOf(baseResponse) + 1, newResponse);
                 }
-                if (record.Equals(Skyrim.DialogTopic.DialogueWhiterunGuardGateStopBribe))
+                if (dial.Equals(Skyrim.DialogTopic.DialogueWhiterunGuardGateStopBribe))
                 {
                     var baseResponse = grup.Find(r => r.FormKey == FormKey.Factory("0D197B:Skyrim.esm"));
                     baseResponse!.Conditions.Add(new ConditionFloat
@@ -378,6 +531,13 @@ namespace HowHardIsThisPersuasionCheck
                         CompareOperator = CompareOperator.EqualTo,
                         ComparisonValue = 1
                     });
+                    baseResponse.VirtualMachineAdapter!.ScriptFragments!.OnEnd?.Clear();
+                    baseResponse.VirtualMachineAdapter!.ScriptFragments!.OnBegin = new ScriptFragment
+                    {
+                        ScriptName = "TIF__000D197B",
+                        FragmentName = "Fragment_2"
+                    };
+
                     grup.Insert(grup.IndexOf(baseResponse) + 1, new DialogResponses(patchMod)
                     {
                         Flags = new DialogResponseFlags(),
@@ -391,12 +551,17 @@ namespace HowHardIsThisPersuasionCheck
                         Skyrim.DialogTopic.DialogueWhiterunGuardGateStopNevermind]
                     });
                 }
-                if (record.Equals(Skyrim.DialogTopic.DialogueWhiterunGuardGateStopPersuade))
+                if (dial.Equals(Skyrim.DialogTopic.DialogueWhiterunGuardGateStopPersuade))
                 {
                     var baseResponse = grup.Find(r => r.FormKey == FormKey.Factory("0D1981:Skyrim.esm"));
-
                     baseResponse?.Conditions.Add(ConstructSpeech(Skyrim.Global.SpeechAverage));
                     baseResponse!.Flags!.Flags |= DialogResponses.Flag.SayOnce;
+                    baseResponse.VirtualMachineAdapter!.ScriptFragments!.OnEnd?.Clear();
+                    baseResponse.VirtualMachineAdapter!.ScriptFragments!.OnBegin = new ScriptFragment
+                    {
+                        ScriptName = "TIF__000D1981",
+                        FragmentName = "Fragment_1"
+                    };
                     grup.Insert(grup.IndexOf(baseResponse) + 1, new DialogResponses(patchMod)
                     {
                         Flags = new DialogResponseFlags(),
@@ -409,7 +574,7 @@ namespace HowHardIsThisPersuasionCheck
                         Conditions = [baseResponse.Conditions[0]]
                     });
                 }
-                if (record.Equals(Skyrim.DialogTopic.DA03StartLodBranchPersuadeTopic))
+                if (dial.Equals(Skyrim.DialogTopic.DA03StartLodBranchPersuadeTopic))
                 {
                     var baseResponse = grup.Find(r => r.FormKey == FormKey.Factory("0D7933:Skyrim.esm"));
                     baseResponse!.Conditions.Add(ConstructSpeech(Skyrim.Global.SpeechEasy));
@@ -437,42 +602,82 @@ namespace HowHardIsThisPersuasionCheck
                     newResponse.Conditions[0].Data.Cast<GetStageConditionData>().Quest.Link.FormKey = Skyrim.Quest.DA03Start.FormKey;
                     grup.Insert(grup.IndexOf(baseResponse) + 1, newResponse);
                 }
-                if (record.Equals(Skyrim.DialogTopic.DialogueRiftenGateNonNorthBranchTopic02))
-                    record.Name = record.Name?.String?.Replace("(Persuade)", "");
-
-                if (name is not null && grup.Any(SpeechCheckFilter) && !DifferentSpeechChecksFilter(record) && !record.Equals(Skyrim.DialogTopic.MS09ThoraldQuestionsBranchTopic))
+                if (dial.Equals(Skyrim.DialogTopic.DialogueRiftenGateNonNorthBranchTopic02))
+                    dial.Name = dial.Name?.String?.Replace("(Persuade)", "");
+                if (dial.Equals(Skyrim.DialogTopic.FreeformCidhnaMineADuachPersuade))
                 {
-                    var speech = grup.First(SpeechCheckFilter).Conditions.First(SpeechConditionFilter);
-                    if (name.Contains("(Persuade)"))
-                        record.Name = name.Replace("(Persuade)", $"(Persuade: {GetSpeechValue(speech)})");
-                    else if (!name.Contains("(Intimidate)") && !name.Contains("gold)"))
-                        record.Name += $" (Persuade: {GetSpeechValue(speech)})";
+                    var baseResponse = grup.Find(r => r.FormKey == FormKey.Factory("0DB837:Skyrim.esm"))!;
+                    baseResponse.VirtualMachineAdapter!.ScriptFragments!.OnBegin = new ScriptFragment
+                    {
+                        ScriptName = "TIF__000DB837",
+                        FragmentName = "Fragment_1"
+                    };
+                }
+                if (dial.Equals(Skyrim.DialogTopic.WE31Persuade))
+                {
+                    var baseResponse = grup.Find(r => r.FormKey == FormKey.Factory("0FF125:Skyrim.esm"))!;
+                    baseResponse.VirtualMachineAdapter!.Scripts[0].Properties.Add(new ScriptObjectProperty
+                    {
+                        Name = "WEPersuade",
+                        Flags = ScriptProperty.Flag.Edited,
+                        Object = Skyrim.Quest.DialogueFavorGeneric
+                    });
+                }
+                if (dial.Equals(Skyrim.DialogTopic.WEJS27Persuade))
+                {
+                    var baseResponse = grup.Find(r => r.FormKey == FormKey.Factory("105D0B:Skyrim.esm"))!;
+                    baseResponse.VirtualMachineAdapter!.Scripts[0].Properties.Add(new ScriptObjectProperty
+                    {
+                        Name = "WEPersuade",
+                        Flags = ScriptProperty.Flag.Edited,
+                        Object = Skyrim.Quest.DialogueFavorGeneric
+                    });
+                }
+                if (dial.Equals(Skyrim.DialogTopic.WERoad06Persuade))
+                {
+                    var baseResponse = grup.Find(r => r.FormKey == FormKey.Factory("106015:Skyrim.esm"))!;
+                    baseResponse.VirtualMachineAdapter!.Scripts[0].Properties.Add(new ScriptObjectProperty
+                    {
+                        Name = "WEPersuade",
+                        Flags = ScriptProperty.Flag.Edited,
+                        Object = Skyrim.Quest.DialogueFavorGeneric
+                    });
                 }
 
-                var speechGrup = grup.Where(SpeechCheckFilter);
+
+
+                foreach (var info in grup.Where(SpeechFilter))
+                {
+                    var speechIndex = info.Conditions.FindIndex(SpeechFilter)!;
+                    info.Conditions[speechIndex] = PatchSpeechCondition(info.Conditions[speechIndex]);
+                    if (!AmuletFilter(info))
+                        info.Conditions.Insert(speechIndex + 1, ConstructAmulet(info.Conditions[speechIndex].CompareOperator != CompareOperator.GreaterThanOrEqualTo));
+                    SortConditions(info.Conditions);
+                }
+
+                if (dial.Name?.String is not null && grup.Any(SpeechFilter) && !DifferentSpeechChecksFilter(dial) && !dial.Equals(Skyrim.DialogTopic.MS09ThoraldQuestionsBranchTopic))
+                {
+                    var speech = grup.First(SpeechFilter).Conditions.First(SpeechFilter);
+                    dial.Name = PatchText(dial.Name, GetSpeechValue(speech));
+                }
+
+                if (DifferentSpeechChecksFilter(dial))
+                {
+                    foreach (var info in grup.Where(SpeechFilter))
+                        if (dial.Name?.String is not null)
+                        {
+                            //var speechDifficulty = GetSpeechValue(GetSpeechCondition(info)!);
+                            //info.Prompt = PatchText(dial.Name, speechDifficulty);
+                        }
+                }
+
+                if (!TextFilter(dial))
+                    PatchPrompts(grup);
+
+
+
                 foreach (var info in grup)
                 {
-                    //Console.WriteLine(info.FormKey);
-                    if (SpeechCheckFilter(info))
-                    {
-                        var speech = info.Conditions.Find(SpeechConditionFilter);
-                        speech!.Data.RunOnType = RunOnType.Reference;
-                        speech!.Data.Reference = Skyrim.PlayerRef;
-                        if (!AmuletFilter(info))
-                            if (speech.CompareOperator == CompareOperator.EqualTo)
-                                info.Conditions.Insert(info.Conditions.IndexOf(speech!) + 1, ConstructAmulet());
-                            else
-                                info.Conditions.Insert(info.Conditions.IndexOf(speech!) + 1, ConstructAmulet(true));
-                        if (!(name is not null && name.Contains("(Persuade:")) && info.Prompt is not null && info.Prompt.String is not null && info.Prompt.String.Contains("(Persuade)"))
-                        {
-                            if (DifferentSpeechChecksFilter(record))
-                            {
-                                var sharedInfo = grup.Where(i => !SpeechCheckFilter(i) && i.Prompt?.String == info.Prompt?.String);
-                                sharedInfo.ForEach(i => i.Prompt = i.Prompt!.String?.Replace("(Persuade)", $"(Persuade: {GetSpeechValue(speech!)})"));
-                            }
-                            info.Prompt.String = info.Prompt.String.Replace("(Persuade)", $"(Persuade: {GetSpeechValue(speech!)})");
-                        }
-                    }
                     if (info.PreviousDialog.IsNull && grup.IndexOf(info) != 0)
                         info.PreviousDialog = grup[grup.IndexOf(info) - 1].ToNullableLink();
                     if (info.FormKey.Equals(FormKey.Factory("027F63:Skyrim.esm")))
@@ -486,11 +691,11 @@ namespace HowHardIsThisPersuasionCheck
                         info.Prompt = null;
                 }
             }
-            foreach (var link in dialRecords)
+            foreach (var record in records)
             {
-                var record = patchMod.DialogTopics.GetOrAddAsOverride(link.Resolve(cache));
-                var subrecordsGetter = subrecords[link.FormKey];
-                var grup = record.Responses;
+                var dial = patchMod.DialogTopics.GetOrAddAsOverride(record);
+                var subrecordsGetter = subrecords[record.FormKey];
+                var grup = dial.Responses;
                 foreach (var info in subrecordsGetter)
                     if (grup.Contains(info.DeepCopy()))
                         grup.Remove(info.DeepCopy());
