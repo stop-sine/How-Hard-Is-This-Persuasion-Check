@@ -120,22 +120,20 @@ namespace HowHardIsThisPersuasionCheck
         public static bool SpeechFilter(IConditionGetter condition)
         {
             return condition is IConditionGlobalGetter { Data: IGetActorValueConditionDataGetter { ActorValue: ActorValue.Speech } }
-            || condition is IConditionFloatGetter { Data: IGetActorValueConditionDataGetter { ActorValue: ActorValue.Speech } };
+                || condition is IConditionFloatGetter { Data: IGetActorValueConditionDataGetter { ActorValue: ActorValue.Speech } };
         }
 
         public static bool SpeechFilter(IDialogResponsesGetter subrecord)
-        {
-            return subrecord.Conditions.Any(SpeechFilter);
-        }
+            => subrecord.Conditions.Any(SpeechFilter);
 
-        public static bool TextFilter(IDialogResponsesGetter subrecord)
+        public static bool TextFilter(object record)
         {
-            return subrecord.Prompt?.String?.Contains("(Persuade)") ?? false;
-        }
-
-        public static bool TextFilter(IDialogTopicGetter record)
-        {
-            return record.Name?.String?.Contains("(Persuade)") ?? false;
+            return record switch
+            {
+                IDialogResponsesGetter r => r.Prompt?.String?.Contains("(Persuade)") ?? false,
+                IDialogTopicGetter t => t.Name?.String?.Contains("(Persuade)") ?? false,
+                _ => false
+            };
         }
 
         public static bool AmuletFilter(IConditionGetter condition)
@@ -144,34 +142,30 @@ namespace HowHardIsThisPersuasionCheck
         }
 
         public static bool AmuletFilter(IDialogResponsesGetter subrecord)
-        {
-            return subrecord.Conditions.Any(AmuletFilter);
-        }
+            => subrecord.Conditions.Any(AmuletFilter);
 
         public static bool DifferentSpeechChecksFilter(DialogTopic record)
         {
-            var conditions = record.Responses.Where(SpeechFilter).Select(GetSpeechCondition);
-            var values = conditions.Select(GetSpeechValue!);
+            var values = record.Responses.Where(SpeechFilter).Select(GetSpeechCondition).Select(GetSpeechValue!);
             return values.Distinct().Count() > 1;
         }
 
         public static bool RecordFilter(IDialogTopicGetter record)
         {
             return (TextFilter(record)
-            || record.Responses.Any(TextFilter)
-            || record.Responses.Any(SpeechFilter)
-            || BrokenRecords.Contains(record.ToLink()))
-            && record.FormKey != FormKey.Factory("02BDDD:Skyrim.esm");
+                || record.Responses.Any(TextFilter)
+                || record.Responses.Any(SpeechFilter)
+                || BrokenRecords.Contains(record.ToLink()))
+                && record.FormKey != FormKey.Factory("02BDDD:Skyrim.esm");
         }
 
         public static List<IDialogResponsesGetter> CollectResponses(IEnumerable<IDialogTopicGetter> dialCollection)
         {
-            var infoCollection = new Dictionary<FormKey, IDialogResponsesGetter>();
-            foreach (var dial in dialCollection.Reverse())
-                foreach (var info in dial.Responses)
-                    if (!infoCollection.TryAdd(info.FormKey, info))
-                        infoCollection[info.FormKey] = info;
-            return [.. infoCollection.Values];
+            return [.. dialCollection
+                .Reverse()
+                .SelectMany(dial => dial.Responses)
+                .GroupBy(info => info.FormKey)
+                .Select(g => g.Last())];
         }
 
         public static Condition PatchSpeechCondition(Condition condition)
@@ -198,30 +192,30 @@ namespace HowHardIsThisPersuasionCheck
 
         public static Mutagen.Bethesda.Strings.TranslatedString PatchText(Mutagen.Bethesda.Strings.TranslatedString text, string speechDifficulty)
         {
-            if (text.String!.Contains("(Persuade)", StringComparison.OrdinalIgnoreCase))
-                text = text.String.Replace("(Persuade)", $"(Persuade: {speechDifficulty})", StringComparison.OrdinalIgnoreCase);
-            else if (!text.String!.Contains("(Persuade:", StringComparison.OrdinalIgnoreCase) &&
-                !text.String!.Contains("(Intimidate)", StringComparison.OrdinalIgnoreCase) &&
-                 !(text.String!.Contains("gold)", StringComparison.OrdinalIgnoreCase) ||
-                   text.String!.Contains("septim)", StringComparison.OrdinalIgnoreCase)))
-                text += $" (Persuade: {speechDifficulty})";
+            var str = text.String ?? "";
+            if (str.Contains("(Persuade)", StringComparison.OrdinalIgnoreCase))
+                return str.Replace("(Persuade)", $"(Persuade: {speechDifficulty})", StringComparison.OrdinalIgnoreCase);
+            if (!str.Contains("(Persuade:", StringComparison.OrdinalIgnoreCase)
+                && !str.Contains("(Intimidate)", StringComparison.OrdinalIgnoreCase)
+                && !(str.Contains("gold)", StringComparison.OrdinalIgnoreCase) || str.Contains("septim)", StringComparison.OrdinalIgnoreCase)))
+                return str + $" (Persuade: {speechDifficulty})";
             return text;
         }
 
         public static Mutagen.Bethesda.Strings.TranslatedString PatchText(Mutagen.Bethesda.Strings.TranslatedString text)
         {
-            if (text.String!.Contains("(Persuade)", StringComparison.OrdinalIgnoreCase))
-                text = text.String.Replace("(Persuade)", $"", StringComparison.OrdinalIgnoreCase);
+            var str = text.String ?? "";
+            if (str.Contains("(Persuade)", StringComparison.OrdinalIgnoreCase))
+                return str.Replace("(Persuade)", "", StringComparison.OrdinalIgnoreCase);
             return text;
         }
 
         public static bool MatchByConditions(DialogResponses a, DialogResponses b)
         {
-            var conditionsA = a.Conditions.Where(c => !(SpeechFilter(c) || AmuletFilter(c))).ToList();
-            var conditionsB = b.Conditions.Where(c => !(SpeechFilter(c) || AmuletFilter(c))).ToList();
-            var conditionsAData = conditionsA.Select(c => c.Data);
-            var conditionsBData = conditionsB.Select(c => c.Data);
-            return conditionsAData.SequenceEqual(conditionsBData);
+            var filter = new Func<IConditionGetter, bool>(c => !(SpeechFilter(c) || AmuletFilter(c)));
+            var aData = a.Conditions.Where(filter).Select(c => c.Data);
+            var bData = b.Conditions.Where(filter).Select(c => c.Data);
+            return aData.SequenceEqual(bData);
         }
 
         public static void PatchPrompts(ExtendedList<DialogResponses> grup)
@@ -238,12 +232,10 @@ namespace HowHardIsThisPersuasionCheck
 
         public static void SortConditions(ExtendedList<Condition> conditions)
         {
-            var speech = conditions.Find(SpeechFilter)!;
-            var amulet = conditions.Find(AmuletFilter)!;
-            conditions.Remove(speech);
-            conditions.Remove(amulet);
-            conditions.Add(speech);
-            conditions.Add(amulet);
+            var speech = conditions.Find(SpeechFilter);
+            var amulet = conditions.Find(AmuletFilter);
+            if (speech != null) { conditions.Remove(speech); conditions.Add(speech); }
+            if (amulet != null) { conditions.Remove(amulet); conditions.Add(amulet); }
         }
 
         private static void AddFavorGenericScriptProperty(DialogResponses? response, string propertyName = "pFDS")
@@ -303,8 +295,6 @@ namespace HowHardIsThisPersuasionCheck
                             ResponseData = FormKey.Factory("0E0CC4:Skyrim.esm").ToNullableLink<IDialogResponsesGetter>()
                         });
                     }
-
-
                 }
                 if (dial.Equals(Skyrim.DialogTopic.DB01MiscGuardPlayerCiceroFramed3))
                 {
@@ -438,7 +428,6 @@ namespace HowHardIsThisPersuasionCheck
                         });
                     }
 
-
                 }
                 if (dial.Equals(Skyrim.DialogTopic.DB02Captive1Persuade))
                 {
@@ -454,9 +443,7 @@ namespace HowHardIsThisPersuasionCheck
                             ResponseData = FormKey.Factory("0E0CC3:Skyrim.esm").ToNullableLink<IDialogResponsesGetter>(),
                             LinkTo = [Skyrim.DialogTopic.DB02Captive1Intimidate, Skyrim.DialogTopic.DB02Captive1Persuade]
                         });
-
                     }
-
                 }
                 if (dial.Equals(Skyrim.DialogTopic.WERJ02Persuade))
                 {
@@ -579,7 +566,6 @@ namespace HowHardIsThisPersuasionCheck
                     if (baseResponse is not null)
                     {
                         AddSpeechCondition(baseResponse, Skyrim.Global.SpeechEasy);
-                        baseResponse!.Conditions.Add(ConstructSpeech(Skyrim.Global.SpeechEasy));
                         AddFavorGenericScriptProperty(baseResponse);
                         EnsureOnBeginScriptFragment(baseResponse, "TIF__000D7933", "Fragment_1");
                         var newResponse = new DialogResponses(patchMod)
@@ -676,8 +662,6 @@ namespace HowHardIsThisPersuasionCheck
                         }
                     }
                 }
-
-
 
                 foreach (var info in grup)
                 {
