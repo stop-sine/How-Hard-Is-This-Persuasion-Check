@@ -766,8 +766,11 @@ namespace HowHardIsThisPersuasionCheck
                 if (dial.Name is null && grup.Where(SpeechFilter).Count() == 1)
                 {
                     var info = grup.Find(i => TextFilter(i) && SpeechFilter(i));
-                    dial.Name = PatchText(info?.Prompt, GetSpeechValue(info));
-                    info?.Prompt?.Clear();
+                    if (info?.Prompt is not null)
+                    {
+                        dial.Name = PatchText(info?.Prompt, GetSpeechValue(info));
+                        info?.Prompt?.Clear();
+                    }
                 }
 
                 if (TextFilter(dial) && !grup.Any(SpeechFilter))
