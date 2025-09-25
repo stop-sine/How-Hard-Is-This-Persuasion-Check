@@ -146,7 +146,6 @@ namespace HowHardIsThisPersuasionCheck
                 return values?.Distinct().Count() > 1;
             }
             return false;
-
         }
 
         private static bool RecordFilter(IDialogTopicGetter record)
