@@ -595,6 +595,12 @@ namespace HowHardIsThisPersuasionCheck
                         Object = Skyrim.Quest.DialogueFavorGeneric
                     });
                 }
+                if (dial.Equals(FormKey.Factory("014035:Dawnguard.esm")))
+                {
+                    var response = grup.Find(i => i.FormKey == FormKey.Factory("01403A:Dawnguard.esm"));
+                    if (response != null)
+                        grup.Remove(response);
+                }
 
                 foreach (var info in grup.Where(SpeechFilter))
                 {
