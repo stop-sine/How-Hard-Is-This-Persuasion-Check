@@ -274,6 +274,7 @@ namespace HowHardIsThisPersuasionCheck
 
             foreach (var record in records)
             {
+                Console.WriteLine(record.FormKey);
                 var subrecordsGetter = subrecords[record.FormKey];
                 var dial = patchMod.DialogTopics.GetOrAddAsOverride(record);
                 dial.Responses.Clear();
