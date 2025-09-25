@@ -9,6 +9,8 @@ using Mutagen.Bethesda.Plugins.Records;
 using System.Data;
 using Mutagen.Bethesda.FormKeys.SkyrimSE;
 using CommandLine;
+using Mutagen.Bethesda.Plugins.Binary.Headers;
+using Microsoft.VisualBasic.FileIO;
 
 namespace HowHardIsThisPersuasionCheck
 {
@@ -38,6 +40,7 @@ namespace HowHardIsThisPersuasionCheck
             Skyrim.DialogTopic.DialogueWhiterunGuardGateStopBribe,
             Skyrim.DialogTopic.DialogueWhiterunGuardGateStopPersuade,
             Skyrim.DialogTopic.DA03StartLodBranchPersuadeTopic,
+            FormKey.Factory("014035:Dawnguard.esm").ToLink<IDialogTopicGetter>(),
             //FormKey.Factory("000087D:HearthFires.esm")
         ];
 
@@ -49,14 +52,14 @@ namespace HowHardIsThisPersuasionCheck
                 .Run(args);
         }
 
-        private static string GetSpeechValue(Condition condition)
+        private static string GetSpeechValue(Condition? condition)
         {
             return SpeechValues[condition.Cast<ConditionGlobal>().ComparisonValue];
         }
 
-        private static string GetSpeechValue(DialogResponses info)
+        private static string GetSpeechValue(DialogResponses? info)
         {
-            var condition = info.Conditions.Find(SpeechFilter);
+            var condition = info?.Conditions.Find(SpeechFilter);
             return SpeechValues[condition.Cast<ConditionGlobal>().ComparisonValue];
         }
 
@@ -65,18 +68,27 @@ namespace HowHardIsThisPersuasionCheck
             return info.Conditions.ToList().Find(SpeechFilter);
         }
 
-        private static ConditionGlobal ConstructSpeech(IFormLink<IGlobalGetter> speechDifficulty)
+        private static ConditionGlobal ConstructSpeech(IFormLink<IGlobalGetter> speechDifficulty, bool flag = default)
         {
             var speech = new ConditionGlobal
             {
-                Data = new GetActorValueConditionData { RunOnType = RunOnType.Reference, Reference = Skyrim.PlayerRef, ActorValue = ActorValue.Speech },
                 CompareOperator = CompareOperator.GreaterThanOrEqualTo,
-                ComparisonValue = speechDifficulty
+                ComparisonValue = speechDifficulty,
+                Data = new GetActorValueConditionData
+                {
+                    RunOnType = RunOnType.Reference,
+                    Reference = Skyrim.PlayerRef,
+                    ActorValue = ActorValue.Speech
+                },
             };
+            if (flag)
+            {
+                speech.CompareOperator = CompareOperator.LessThan;
+            }
             return speech;
         }
 
-        private static ConditionFloat ConstructAmulet(bool anti = default)
+        private static ConditionFloat ConstructAmulet(bool flag = default)
         {
             var amulet = new ConditionFloat
             {
@@ -94,7 +106,7 @@ namespace HowHardIsThisPersuasionCheck
                 ComparisonValue = 1,
                 Flags = Flag.OR
             };
-            if (anti)
+            if (flag)
                 amulet.CompareOperator = CompareOperator.NotEqualTo;
             return amulet;
         }
@@ -168,16 +180,19 @@ namespace HowHardIsThisPersuasionCheck
             }
             condition.Data.RunOnType = RunOnType.Reference;
             condition.Data.Reference = Skyrim.PlayerRef;
-            condition.Flags = Flag.OR;
+            if (condition.CompareOperator == CompareOperator.GreaterThanOrEqualTo)
+                condition.Flags = Flag.OR;
             return condition;
         }
 
-        private static Mutagen.Bethesda.Strings.TranslatedString PatchText(Mutagen.Bethesda.Strings.TranslatedString text, string speechDifficulty)
+        private static Mutagen.Bethesda.Strings.TranslatedString? PatchText(Mutagen.Bethesda.Strings.TranslatedString? text, string speechDifficulty)
         {
-            var str = text.String ?? "";
+            var str = text?.String ?? "";
             if (str.Contains("(Persuade)", StringComparison.OrdinalIgnoreCase))
                 return str.Replace("(Persuade)", $"(Persuade: {speechDifficulty})", StringComparison.OrdinalIgnoreCase);
-            if (!str.Contains("(Persuade:", StringComparison.OrdinalIgnoreCase)
+            else if (str.Contains("(Coerce)", StringComparison.OrdinalIgnoreCase))
+                return str.Replace("(Coerce)", $"(Coerce: {speechDifficulty})", StringComparison.OrdinalIgnoreCase);
+            else if (!str.Contains("(Persuade:", StringComparison.OrdinalIgnoreCase)
                 && !str.Contains("(Intimidate)", StringComparison.OrdinalIgnoreCase)
                 && !(str.Contains("gold)", StringComparison.OrdinalIgnoreCase) || str.Contains("septim)", StringComparison.OrdinalIgnoreCase)))
                 return str + $" (Persuade: {speechDifficulty})";
@@ -536,6 +551,21 @@ namespace HowHardIsThisPersuasionCheck
                         });
                     }
                 }
+                if (dial.Equals(Skyrim.DialogTopic.FFRiften22SapphireBranchTopic01))
+                {
+                    var baseResponse = grup.Find(i => i.FormKey == FormKey.Factory("0D4FC2:Skyrim.esm"));
+                    if (baseResponse is not null)
+                    {
+                        AddSpeechCondition(baseResponse, Skyrim.Global.SpeechAverage);
+                        baseResponse.Flags?.Flags = DialogResponses.Flag.Goodbye;
+                        baseResponse.Flags?.Flags |= DialogResponses.Flag.SayOnce;
+                    }
+
+                    var otherResponse = grup.Find(i => i.FormKey == FormKey.Factory("0D4FC3:Skyrim.esm"));
+                    otherResponse?.LinkTo.Clear();
+                    otherResponse?.Flags?.Flags = DialogResponses.Flag.Goodbye;
+                    otherResponse?.Flags?.Flags |= DialogResponses.Flag.SayOnce;
+                }
                 if (dial.Equals(Skyrim.DialogTopic.DA03StartLodBranchPersuadeTopic))
                 {
                     var baseResponse = grup.Find(r => r.FormKey == FormKey.Factory("0D7933:Skyrim.esm"));
@@ -595,11 +625,119 @@ namespace HowHardIsThisPersuasionCheck
                         Object = Skyrim.Quest.DialogueFavorGeneric
                     });
                 }
-                if (dial.Equals(FormKey.Factory("014035:Dawnguard.esm")))
+                if (dial.Equals(FormKey.Factory("014035:Dawnguard.esm").ToLink<IDialogTopicGetter>()))
                 {
                     var response = grup.Find(i => i.FormKey == FormKey.Factory("01403A:Dawnguard.esm"));
-                    if (response != null)
-                        grup.Remove(response);
+                    response?.Clear();
+                }
+                if (dial.Equals(FormKey.Factory("027573:Dragonborn.esm").ToLink<IDialogTopicGetter>()))
+                {
+                    var response = grup.Find(i => i.FormKey == FormKey.Factory("0275A4:Dragonborn.esm"));
+                    if (response?.Responses != null && response.Responses.Count > 0 && response.Responses[0]?.Text != null)
+                    {
+                        var originalText = response.Responses[0].Text.String;
+                        if (originalText != null)
+                            response.Responses[0].Text = originalText.Replace("(Failed)", "");
+                    }
+                }
+                if (dial.Equals(FormKey.Factory("02C07D:Dragonborn.esm").ToLink<IDialogTopicGetter>()))
+                {
+                    grup.Add(new DialogResponses(patchMod)
+                    {
+                        Flags = new DialogResponseFlags(),
+                        LinkTo = [FormKey.Factory("02C07C:Dragonborn.esm").ToLink<IDialogTopicGetter>(),
+                        FormKey.Factory("02C07A:Dragonborn.esm").ToLink<IDialogTopicGetter>(),
+                        FormKey.Factory("02C079:Dragonborn.esm").ToLink<IDialogTopicGetter>(),
+                        FormKey.Factory("02C078:Dragonborn.esm").ToLink<IDialogTopicGetter>()],
+                        ResponseData = FormKey.Factory("0E0CC4:Skyrim.esm").ToNullableLink<IDialogResponsesGetter>(),
+                        Conditions = [new ConditionFloat {
+                            CompareOperator = CompareOperator.EqualTo,
+                            ComparisonValue = 0,
+                            Data = new IsTrespassingConditionData {
+                                Reference = Skyrim.PlayerRef
+                            }
+                        },
+                        new ConditionFloat {
+                            CompareOperator = CompareOperator.GreaterThan,
+                            ComparisonValue = 0,
+                            Data = new GetCrimeGoldConditionData {
+                                RunOnType = RunOnType.Subject
+                            }
+                        },
+                        new ConditionFloat {
+                            CompareOperator = CompareOperator.EqualTo,
+                            ComparisonValue = 0,
+                            Data = new GetCrimeGoldViolentConditionData {
+                                RunOnType = RunOnType.Subject
+                            }
+                        },
+                        new ConditionFloat {
+                            CompareOperator = CompareOperator.EqualTo,
+                            ComparisonValue = 0,
+                            Data = new IsBribedbyPlayerConditionData {
+                                RunOnType = RunOnType.Subject
+                            }
+                        },
+                        new ConditionFloat {
+                            CompareOperator = CompareOperator.EqualTo,
+                            ComparisonValue = 0,
+                            Data = new GetIsVoiceTypeConditionData {
+                                RunOnType = RunOnType.Subject
+                            }
+                        }]
+                    });
+                    grup.Add(new DialogResponses(patchMod)
+                    {
+                        Flags = new DialogResponseFlags(),
+                        LinkTo = [FormKey.Factory("02C07C:Dragonborn.esm").ToLink<IDialogTopicGetter>(),
+                        FormKey.Factory("02C07A:Dragonborn.esm").ToLink<IDialogTopicGetter>(),
+                        FormKey.Factory("02C079:Dragonborn.esm").ToLink<IDialogTopicGetter>(),
+                        FormKey.Factory("02C078:Dragonborn.esm").ToLink<IDialogTopicGetter>()],
+                        Responses = [new DialogResponse {
+                            Emotion = Emotion.Anger,
+                            EmotionValue = 50,
+                            ResponseNumber = 1,
+                            Flags = DialogResponse.Flag.UseEmotionAnimation,
+                            Text = "That's not going to happen.",
+                        }],
+                        Conditions = [new ConditionFloat {
+                            CompareOperator = CompareOperator.EqualTo,
+                            ComparisonValue = 0,
+                            Data = new IsTrespassingConditionData {
+                                Reference = Skyrim.PlayerRef
+                            }
+                        },
+                        new ConditionFloat {
+                            CompareOperator = CompareOperator.GreaterThan,
+                            ComparisonValue = 0,
+                            Data = new GetCrimeGoldConditionData {
+                                RunOnType = RunOnType.Subject
+                            }
+                        },
+                        new ConditionFloat {
+                            CompareOperator = CompareOperator.EqualTo,
+                            ComparisonValue = 0,
+                            Data = new GetCrimeGoldViolentConditionData {
+                                RunOnType = RunOnType.Subject
+                            }
+                        },
+                        new ConditionFloat {
+                            CompareOperator = CompareOperator.EqualTo,
+                            ComparisonValue = 0,
+                            Data = new IsBribedbyPlayerConditionData {
+                                RunOnType = RunOnType.Subject
+                            }
+                        },
+                        new ConditionFloat {
+                            CompareOperator = CompareOperator.EqualTo,
+                            ComparisonValue = 1,
+                            Data = new GetIsVoiceTypeConditionData {
+                                RunOnType = RunOnType.Subject
+                            }
+                        }]
+                    });
+                    foreach (var info in grup.Where(i => !SpeechFilter(i)))
+                        info.Conditions.Last().Data.Cast<GetIsVoiceTypeConditionData>().VoiceTypeOrList.Link.FormKey = FormKey.Factory("018469:Dragonborn.esm");
                 }
 
                 foreach (var info in grup.Where(SpeechFilter))
@@ -615,6 +753,13 @@ namespace HowHardIsThisPersuasionCheck
                 {
                     var speech = grup.First(SpeechFilter).Conditions.First(SpeechFilter);
                     dial.Name = PatchText(dial.Name, GetSpeechValue(speech));
+                }
+
+                if (dial.Name is null && grup.Where(SpeechFilter).Count() == 1)
+                {
+                    var info = grup.Find(i => TextFilter(i) && SpeechFilter(i));
+                    dial.Name = PatchText(info?.Prompt, GetSpeechValue(info));
+                    info?.Prompt?.Clear();
                 }
 
                 if (TextFilter(dial) && !grup.Any(SpeechFilter))
