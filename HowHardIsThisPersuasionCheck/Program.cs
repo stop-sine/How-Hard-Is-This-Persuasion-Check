@@ -495,13 +495,7 @@ namespace HowHardIsThisPersuasionCheck
                         ComparisonValue = 1
                     });
                     baseResponse.VirtualMachineAdapter?.ScriptFragments?.OnEnd?.Clear();
-                    if (baseResponse.VirtualMachineAdapter?.ScriptFragments?.OnBegin is null)
-                        baseResponse.VirtualMachineAdapter?.ScriptFragments?.OnBegin = new ScriptFragment
-                        {
-                            ScriptName = "TIF__000D197B",
-                            FragmentName = "Fragment_2"
-                        };
-
+                    EnsureOnBeginScriptFragment(baseResponse, "TIF__000D197B", "Fragment_2");
                     grup.Insert(grup.IndexOf(baseResponse) + 1, new DialogResponses(patchMod)
                     {
                         Flags = new DialogResponseFlags(),
@@ -523,12 +517,7 @@ namespace HowHardIsThisPersuasionCheck
                         AddSpeechCondition(baseResponse, Skyrim.Global.SpeechAverage);
                         baseResponse.Flags!.Flags |= DialogResponses.Flag.SayOnce;
                         baseResponse.VirtualMachineAdapter!.ScriptFragments!.OnEnd?.Clear();
-                        if (baseResponse.VirtualMachineAdapter?.ScriptFragments?.OnBegin is null)
-                            baseResponse.VirtualMachineAdapter?.ScriptFragments?.OnBegin = new ScriptFragment
-                            {
-                                ScriptName = "TIF__000D1981",
-                                FragmentName = "Fragment_1"
-                            };
+                        EnsureOnBeginScriptFragment(baseResponse, "TIF__000D1981", "Fragment_1");
                         grup.Insert(grup.IndexOf(baseResponse) + 1, new DialogResponses(patchMod)
                         {
                             Flags = new DialogResponseFlags(),
