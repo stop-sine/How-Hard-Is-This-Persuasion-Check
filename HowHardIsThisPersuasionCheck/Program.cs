@@ -1,32 +1,14 @@
 using Mutagen.Bethesda;
 using Mutagen.Bethesda.Synthesis;
 using Mutagen.Bethesda.Skyrim;
-using Noggog.StructuredStrings;
-using Microsoft.VisualBasic;
 using DynamicData;
-using System.Diagnostics;
-using OneOf.Types;
 using static Mutagen.Bethesda.Skyrim.Condition;
 using Noggog;
-using Noggog.Streams;
-using FluentResults;
 using Mutagen.Bethesda.Plugins;
-using Mutagen.Bethesda.Plugins.Cache;
 using Mutagen.Bethesda.Plugins.Records;
-using Mutagen.Bethesda.Plugins.Exceptions;
-using System.ComponentModel.DataAnnotations;
-using Microsoft.Extensions.Logging.Abstractions;
-using System.Security.Permissions;
 using System.Data;
-using System.Reflection;
-using System.Linq;
 using Mutagen.Bethesda.FormKeys.SkyrimSE;
-using Mutagen.Bethesda.Plugins.Implicit;
-using Noggog.StructuredStrings.CSharp;
 using CommandLine;
-using System.ComponentModel.Design;
-using Mutagen.Bethesda.Plugins.Analysis;
-using System.Text.RegularExpressions;
 
 namespace HowHardIsThisPersuasionCheck
 {
