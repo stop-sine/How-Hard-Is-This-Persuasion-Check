@@ -193,7 +193,6 @@ namespace HowHardIsThisPersuasionCheck
             return [.. infoCollection.Values];
         }
 
-
         public static Condition PatchSpeechCondition(Condition condition)
         {
             if (condition is ConditionFloat floatCondition)
@@ -248,13 +247,16 @@ namespace HowHardIsThisPersuasionCheck
 
         public static void SortConditions(ExtendedList<Condition> conditions)
         {
-            if (conditions.Any(SpeechFilter) && conditions.Any(AmuletFilter))
+            if (conditions.Any(SpeechFilter) && conditions.Any(AmuletFilter) &&
+            conditions.Any(c => c.Data is GetStageDoneConditionData
+                     || c.Data is GetVMQuestVariableConditionData
+                     || c.Data is GetGlobalValueConditionData))
             {
                 var speech = conditions.Find(SpeechFilter)!;
-                conditions.RemoveAt(conditions.IndexOf(speech));
-                conditions.Add(speech);
                 var amulet = conditions.Find(AmuletFilter)!;
-                conditions.RemoveAt(conditions.IndexOf(amulet));
+                conditions.Remove(speech);
+                conditions.Remove(amulet);
+                conditions.Add(speech);
                 conditions.Add(amulet);
             }
         }
@@ -268,7 +270,9 @@ namespace HowHardIsThisPersuasionCheck
                 d => d.FormKey,
                 d => CollectResponses(d.FormKey.ToLinkGetter<IDialogTopicGetter>().ResolveAll(cache))
             );
+
             Console.WriteLine($"Found {records.Count} records to be patched");
+
             foreach (var record in records)
             {
                 var subrecordsGetter = subrecords[record.FormKey];
@@ -350,7 +354,8 @@ namespace HowHardIsThisPersuasionCheck
                     baseResponse.VirtualMachineAdapter!.ScriptFragments!.OnBegin = new ScriptFragment
                     {
                         ScriptName = "TIF__00067EC6",
-                        FragmentName = "Fragment_1"
+                        FragmentName = "Fragment_1",
+                        ExtraBindDataVersion = 1,
                     };
                 }
                 if (dial.Equals(Skyrim.DialogTopic.DA11IntroVerulusPersuade))
@@ -421,13 +426,11 @@ namespace HowHardIsThisPersuasionCheck
                         LinkTo = [Skyrim.DialogTopic.DB02Captive1Intimidate, Skyrim.DialogTopic.DB02Captive1Persuade]
                     });
                 }
-
                 if (dial.Equals(Skyrim.DialogTopic.WERJ02Persuade))
                 {
                     var baseResponse = grup.Find(r => r.FormKey == FormKey.Factory("0B815A:Skyrim.esm"))!;
                     baseResponse.Flags?.Flags = DialogResponses.Flag.Goodbye;
                 }
-
                 if (dial.Equals(Skyrim.DialogTopic.MQ201PartyDistractionPersuadeSiddgeir))
                 {
                     var baseResponse = grup.Find(r => r.FormKey == FormKey.Factory("0C0809:Skyrim.esm"))!;
@@ -670,7 +673,6 @@ namespace HowHardIsThisPersuasionCheck
                             //info.Prompt = PatchText(dial.Name, speechDifficulty);
                         }
                 }
-
                 if (!TextFilter(dial))
                     PatchPrompts(grup);
 
