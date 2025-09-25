@@ -249,18 +249,12 @@ namespace HowHardIsThisPersuasionCheck
 
         public static void SortConditions(ExtendedList<Condition> conditions)
         {
-            if (conditions.Any(SpeechFilter) && conditions.Any(AmuletFilter) &&
-            conditions.Any(c => c.Data is GetStageDoneConditionData
-                     || c.Data is GetVMQuestVariableConditionData
-                     || c.Data is GetGlobalValueConditionData))
-            {
-                var speech = conditions.Find(SpeechFilter)!;
-                var amulet = conditions.Find(AmuletFilter)!;
-                conditions.Remove(speech);
-                conditions.Remove(amulet);
-                conditions.Add(speech);
-                conditions.Add(amulet);
-            }
+            var speech = conditions.Find(SpeechFilter)!;
+            var amulet = conditions.Find(AmuletFilter)!;
+            conditions.Remove(speech);
+            conditions.Remove(amulet);
+            conditions.Add(speech);
+            conditions.Add(amulet);
         }
 
         public static void RunPatch(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
