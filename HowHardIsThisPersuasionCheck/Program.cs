@@ -488,26 +488,30 @@ namespace HowHardIsThisPersuasionCheck
                 if (dial.Equals(Skyrim.DialogTopic.DialogueWhiterunGuardGateStopBribe))
                 {
                     var baseResponse = grup.Find(r => r.FormKey == FormKey.Factory("0D197B:Skyrim.esm"));
-                    baseResponse!.Conditions.Add(new ConditionFloat
+                    if (baseResponse is not null)
                     {
-                        Data = new GetBribeSuccessConditionData { RunOnType = RunOnType.Subject },
-                        CompareOperator = CompareOperator.EqualTo,
-                        ComparisonValue = 1
-                    });
-                    baseResponse.VirtualMachineAdapter?.ScriptFragments?.OnEnd?.Clear();
-                    EnsureOnBeginScriptFragment(baseResponse, "TIF__000D197B", "Fragment_2");
-                    grup.Insert(grup.IndexOf(baseResponse) + 1, new DialogResponses(patchMod)
-                    {
-                        Flags = new DialogResponseFlags(),
-                        ResponseData = FormKey.Factory("0E0CC4:Skyrim.esm").ToNullableLink<IDialogResponsesGetter>(),
-                        Conditions = [baseResponse.Conditions[0], new ConditionFloat{
+                        baseResponse.Conditions.Add(new ConditionFloat
+                        {
+                            Data = new GetBribeSuccessConditionData { RunOnType = RunOnType.Subject },
+                            CompareOperator = CompareOperator.EqualTo,
+                            ComparisonValue = 1
+                        });
+                        if (baseResponse.VirtualMachineAdapter?.ScriptFragments?.OnEnd is not null)
+                            baseResponse.VirtualMachineAdapter.ScriptFragments.OnEnd = null;
+                        EnsureOnBeginScriptFragment(baseResponse, "TIF__000D197B", "Fragment_2");
+                        grup.Insert(grup.IndexOf(baseResponse) + 1, new DialogResponses(patchMod)
+                        {
+                            Flags = new DialogResponseFlags(),
+                            ResponseData = FormKey.Factory("0E0CC4:Skyrim.esm").ToNullableLink<IDialogResponsesGetter>(),
+                            Conditions = [baseResponse.Conditions[0], new ConditionFloat{
                         Data = new GetIntimidateSuccessConditionData { RunOnType = RunOnType.Subject }, CompareOperator = CompareOperator.EqualTo, ComparisonValue = 0}],
-                        LinkTo = [Skyrim.DialogTopic.DialogueWhiterunGuardGateStopNote,
+                            LinkTo = [Skyrim.DialogTopic.DialogueWhiterunGuardGateStopNote,
                         Skyrim.DialogTopic.DialogueWhiterunGuardGateStopPersuade,
                         Skyrim.DialogTopic.DialogueWhiterunGuardGateStopBribe,
                         Skyrim.DialogTopic.DialogueWhiterunGuardGateStopIntimidate,
                         Skyrim.DialogTopic.DialogueWhiterunGuardGateStopNevermind]
-                    });
+                        });
+                    }
                 }
                 if (dial.Equals(Skyrim.DialogTopic.DialogueWhiterunGuardGateStopPersuade))
                 {
@@ -516,7 +520,8 @@ namespace HowHardIsThisPersuasionCheck
                     {
                         AddSpeechCondition(baseResponse, Skyrim.Global.SpeechAverage);
                         baseResponse.Flags!.Flags |= DialogResponses.Flag.SayOnce;
-                        baseResponse.VirtualMachineAdapter!.ScriptFragments!.OnEnd?.Clear();
+                        if (baseResponse.VirtualMachineAdapter?.ScriptFragments?.OnEnd is not null)
+                            baseResponse.VirtualMachineAdapter.ScriptFragments.OnEnd = null;
                         EnsureOnBeginScriptFragment(baseResponse, "TIF__000D1981", "Fragment_1");
                         grup.Insert(grup.IndexOf(baseResponse) + 1, new DialogResponses(patchMod)
                         {
