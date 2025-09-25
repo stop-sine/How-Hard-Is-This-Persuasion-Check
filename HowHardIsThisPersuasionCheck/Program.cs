@@ -353,11 +353,12 @@ namespace HowHardIsThisPersuasionCheck
                         Flags = ScriptProperty.Flag.Edited,
                         Object = Skyrim.Quest.DialogueFavorGeneric
                     });
-                    baseResponse.VirtualMachineAdapter!.ScriptFragments!.OnBegin = new ScriptFragment
-                    {
-                        ScriptName = "TIF__00067EC6",
-                        FragmentName = "Fragment_1"
-                    };
+                    if (baseResponse.VirtualMachineAdapter?.ScriptFragments?.OnBegin is null)
+                        baseResponse.VirtualMachineAdapter?.ScriptFragments?.OnBegin = new ScriptFragment
+                        {
+                            ScriptName = "TIF__00067EC6",
+                            FragmentName = "Fragment_1"
+                        };
                 }
                 if (dial.Equals(Skyrim.DialogTopic.DA11IntroVerulusPersuade))
                 {
@@ -441,11 +442,12 @@ namespace HowHardIsThisPersuasionCheck
                         Flags = ScriptProperty.Flag.Edited,
                         Object = Skyrim.Quest.DialogueFavorGeneric
                     });
-                    baseResponse.VirtualMachineAdapter!.ScriptFragments!.OnBegin = new ScriptFragment
-                    {
-                        ScriptName = "TIF__000C0809",
-                        FragmentName = "Fragment_2"
-                    };
+                    if (baseResponse.VirtualMachineAdapter?.ScriptFragments?.OnBegin is null)
+                        baseResponse.VirtualMachineAdapter?.ScriptFragments?.OnBegin = new ScriptFragment
+                        {
+                            ScriptName = "TIF__000C0809",
+                            FragmentName = "Fragment_2"
+                        };
                 }
                 if (dial.Equals(Skyrim.DialogTopic.MQ201PartyDistractionPersuadeIgmund))
                 {
@@ -456,11 +458,12 @@ namespace HowHardIsThisPersuasionCheck
                         Flags = ScriptProperty.Flag.Edited,
                         Object = Skyrim.Quest.DialogueFavorGeneric
                     });
-                    baseResponse.VirtualMachineAdapter!.ScriptFragments!.OnBegin = new ScriptFragment
-                    {
-                        ScriptName = "TIF__000C080D",
-                        FragmentName = "Fragment_2"
-                    };
+                    if (baseResponse.VirtualMachineAdapter?.ScriptFragments?.OnBegin is null)
+                        baseResponse.VirtualMachineAdapter?.ScriptFragments?.OnBegin = new ScriptFragment
+                        {
+                            ScriptName = "TIF__000C080D",
+                            FragmentName = "Fragment_2"
+                        };
                 }
                 if (dial.Equals(Skyrim.DialogTopic.MQ201PartyDistractionPersuadeVittoria))
                 {
@@ -471,11 +474,12 @@ namespace HowHardIsThisPersuasionCheck
                         Flags = ScriptProperty.Flag.Edited,
                         Object = Skyrim.Quest.DialogueFavorGeneric
                     });
-                    baseResponse.VirtualMachineAdapter!.ScriptFragments!.OnBegin = new ScriptFragment
-                    {
-                        ScriptName = "TIF__000665D9",
-                        FragmentName = "Fragment_2"
-                    };
+                    if (baseResponse.VirtualMachineAdapter?.ScriptFragments?.OnBegin is null)
+                        baseResponse.VirtualMachineAdapter?.ScriptFragments?.OnBegin = new ScriptFragment
+                        {
+                            ScriptName = "TIF__000665D9",
+                            FragmentName = "Fragment_2"
+                        };
                 }
                 if (dial.Equals(Skyrim.DialogTopic.MQ201PartyDistractionPersuadeElisif))
                 {
@@ -486,11 +490,12 @@ namespace HowHardIsThisPersuasionCheck
                         Flags = ScriptProperty.Flag.Edited,
                         Object = Skyrim.Quest.DialogueFavorGeneric
                     });
-                    baseResponse.VirtualMachineAdapter!.ScriptFragments!.OnBegin = new ScriptFragment
-                    {
-                        ScriptName = "TIF__000C0813",
-                        FragmentName = "Fragment_2"
-                    };
+                    if (baseResponse.VirtualMachineAdapter?.ScriptFragments?.OnBegin is null)
+                        baseResponse.VirtualMachineAdapter?.ScriptFragments?.OnBegin = new ScriptFragment
+                        {
+                            ScriptName = "TIF__000C0813",
+                            FragmentName = "Fragment_2"
+                        };
                 }
                 if (dial.Equals(Skyrim.DialogTopic.DA14AskAboutStaffPersuadeTopic))
                 {
@@ -535,12 +540,13 @@ namespace HowHardIsThisPersuasionCheck
                         CompareOperator = CompareOperator.EqualTo,
                         ComparisonValue = 1
                     });
-                    baseResponse.VirtualMachineAdapter!.ScriptFragments!.OnEnd?.Clear();
-                    baseResponse.VirtualMachineAdapter!.ScriptFragments!.OnBegin = new ScriptFragment
-                    {
-                        ScriptName = "TIF__000D197B",
-                        FragmentName = "Fragment_2"
-                    };
+                    baseResponse.VirtualMachineAdapter?.ScriptFragments?.OnEnd?.Clear();
+                    if (baseResponse.VirtualMachineAdapter?.ScriptFragments?.OnBegin is null)
+                        baseResponse.VirtualMachineAdapter?.ScriptFragments?.OnBegin = new ScriptFragment
+                        {
+                            ScriptName = "TIF__000D197B",
+                            FragmentName = "Fragment_2"
+                        };
 
                     grup.Insert(grup.IndexOf(baseResponse) + 1, new DialogResponses(patchMod)
                     {
@@ -561,11 +567,12 @@ namespace HowHardIsThisPersuasionCheck
                     baseResponse?.Conditions.Add(ConstructSpeech(Skyrim.Global.SpeechAverage));
                     baseResponse!.Flags!.Flags |= DialogResponses.Flag.SayOnce;
                     baseResponse.VirtualMachineAdapter!.ScriptFragments!.OnEnd?.Clear();
-                    baseResponse.VirtualMachineAdapter!.ScriptFragments!.OnBegin = new ScriptFragment
-                    {
-                        ScriptName = "TIF__000D1981",
-                        FragmentName = "Fragment_1"
-                    };
+                    if (baseResponse.VirtualMachineAdapter?.ScriptFragments?.OnBegin is null)
+                        baseResponse.VirtualMachineAdapter?.ScriptFragments?.OnBegin = new ScriptFragment
+                        {
+                            ScriptName = "TIF__000D1981",
+                            FragmentName = "Fragment_1"
+                        };
                     grup.Insert(grup.IndexOf(baseResponse) + 1, new DialogResponses(patchMod)
                     {
                         Flags = new DialogResponseFlags(),
@@ -588,11 +595,12 @@ namespace HowHardIsThisPersuasionCheck
                         Flags = ScriptProperty.Flag.Edited,
                         Object = Skyrim.Quest.DialogueFavorGeneric
                     });
-                    baseResponse.VirtualMachineAdapter!.ScriptFragments!.OnBegin = new ScriptFragment
-                    {
-                        ScriptName = "TIF__000D7933",
-                        FragmentName = "Fragment_1"
-                    };
+                    if (baseResponse.VirtualMachineAdapter?.ScriptFragments?.OnBegin is null)
+                        baseResponse.VirtualMachineAdapter?.ScriptFragments?.OnBegin = new ScriptFragment
+                        {
+                            ScriptName = "TIF__000D7933",
+                            FragmentName = "Fragment_1"
+                        };
                     var newResponse = new DialogResponses(patchMod)
                     {
                         Flags = new DialogResponseFlags(),
@@ -611,11 +619,12 @@ namespace HowHardIsThisPersuasionCheck
                 if (dial.Equals(Skyrim.DialogTopic.FreeformCidhnaMineADuachPersuade))
                 {
                     var baseResponse = grup.Find(r => r.FormKey == FormKey.Factory("0DB837:Skyrim.esm"))!;
-                    baseResponse.VirtualMachineAdapter!.ScriptFragments!.OnBegin = new ScriptFragment
-                    {
-                        ScriptName = "TIF__000DB837",
-                        FragmentName = "Fragment_1"
-                    };
+                    if (baseResponse.VirtualMachineAdapter?.ScriptFragments?.OnBegin is null)
+                        baseResponse.VirtualMachineAdapter?.ScriptFragments?.OnBegin = new ScriptFragment
+                        {
+                            ScriptName = "TIF__000DB837",
+                            FragmentName = "Fragment_1"
+                        };
                 }
                 if (dial.Equals(Skyrim.DialogTopic.WE31Persuade))
                 {
