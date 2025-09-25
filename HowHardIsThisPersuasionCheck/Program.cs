@@ -172,11 +172,11 @@ namespace HowHardIsThisPersuasionCheck
             {
                 ConditionGlobal? globalCondition = floatCondition.ComparisonValue switch
                 {
-                    10 => ConstructSpeech(Skyrim.Global.SpeechVeryEasy),
-                    25 => ConstructSpeech(Skyrim.Global.SpeechEasy),
-                    50 => ConstructSpeech(Skyrim.Global.SpeechAverage),
-                    75 => ConstructSpeech(Skyrim.Global.SpeechHard),
-                    100 => ConstructSpeech(Skyrim.Global.SpeechVeryHard),
+                    <= 10 => ConstructSpeech(Skyrim.Global.SpeechVeryEasy),
+                    <= 25 => ConstructSpeech(Skyrim.Global.SpeechEasy),
+                    <= 50 => ConstructSpeech(Skyrim.Global.SpeechAverage),
+                    <= 75 => ConstructSpeech(Skyrim.Global.SpeechHard),
+                    <= 100 => ConstructSpeech(Skyrim.Global.SpeechVeryHard),
                     _ => null
                 };
                 if (globalCondition is not null)
