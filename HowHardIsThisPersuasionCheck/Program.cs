@@ -140,8 +140,8 @@ namespace HowHardIsThisPersuasionCheck
 
         private static bool DifferentSpeechChecksFilter(DialogTopic record)
         {
-            var values = record.Responses.Where(SpeechFilter).Select(GetSpeechCondition).Select(GetSpeechValue!);
-            return values.Distinct().Count() > 1;
+            var values = record.Responses.Where(SpeechFilter)?.Select(GetSpeechCondition).Select(GetSpeechValue);
+            return values?.Distinct().Count() > 1;
         }
 
         private static bool RecordFilter(IDialogTopicGetter record)
