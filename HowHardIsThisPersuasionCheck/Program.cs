@@ -754,10 +754,13 @@ namespace HowHardIsThisPersuasionCheck
                     SortConditions(info.Conditions);
                 }
 
-                if (dial.Name?.String is not null && grup.Any(SpeechFilter) && !DifferentSpeechChecksFilter(dial) && !dial.Equals(Skyrim.DialogTopic.MS09ThoraldQuestionsBranchTopic))
+                if (dial.Name?.String is not null && grup.Any(SpeechFilter))
                 {
-                    var speech = grup.First(SpeechFilter).Conditions.First(SpeechFilter);
-                    dial.Name = PatchText(dial.Name, GetSpeechValue(speech));
+                    if (!DifferentSpeechChecksFilter(dial) && !dial.Equals(Skyrim.DialogTopic.MS09ThoraldQuestionsBranchTopic))
+                    {
+                        var speech = grup.First(SpeechFilter).Conditions.First(SpeechFilter);
+                        dial.Name = PatchText(dial.Name, GetSpeechValue(speech));
+                    }
                 }
 
                 if (dial.Name is null && grup.Where(SpeechFilter).Count() == 1)
