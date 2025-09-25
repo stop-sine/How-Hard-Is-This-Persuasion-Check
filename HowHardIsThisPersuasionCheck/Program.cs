@@ -228,9 +228,11 @@ namespace HowHardIsThisPersuasionCheck
 
         public static bool MatchByConditions(DialogResponses a, DialogResponses b)
         {
-            var conditionsA = a.Conditions.Where(c => !SpeechFilter(c) && !AmuletFilter(c)).ToList();
-            var conditionsB = b.Conditions.Where(c => !SpeechFilter(c) && !AmuletFilter(c)).ToList();
-            return conditionsA.Intersect(conditionsB).Any();
+            var conditionsA = a.Conditions.Where(c => !(SpeechFilter(c) || AmuletFilter(c))).ToList();
+            var conditionsB = b.Conditions.Where(c => !(SpeechFilter(c) || AmuletFilter(c))).ToList();
+            var conditionsAData = conditionsA.Select(c => c.Data);
+            var conditionsBData = conditionsB.Select(c => c.Data);
+            return conditionsAData.SequenceEqual(conditionsBData);
         }
 
         public static void PatchPrompts(ExtendedList<DialogResponses> grup)
@@ -354,8 +356,7 @@ namespace HowHardIsThisPersuasionCheck
                     baseResponse.VirtualMachineAdapter!.ScriptFragments!.OnBegin = new ScriptFragment
                     {
                         ScriptName = "TIF__00067EC6",
-                        FragmentName = "Fragment_1",
-                        ExtraBindDataVersion = 1,
+                        FragmentName = "Fragment_1"
                     };
                 }
                 if (dial.Equals(Skyrim.DialogTopic.DA11IntroVerulusPersuade))
@@ -647,8 +648,6 @@ namespace HowHardIsThisPersuasionCheck
                     });
                 }
 
-
-
                 foreach (var info in grup.Where(SpeechFilter))
                 {
                     var speechIndex = info.Conditions.FindIndex(SpeechFilter)!;
@@ -666,17 +665,27 @@ namespace HowHardIsThisPersuasionCheck
 
                 if (DifferentSpeechChecksFilter(dial))
                 {
+                    Console.WriteLine(dial.FormKey);
+                    Console.WriteLine(dial.EditorID);
                     foreach (var info in grup.Where(SpeechFilter))
-                        if (dial.Name?.String is not null)
-                        {
-                            //var speechDifficulty = GetSpeechValue(GetSpeechCondition(info)!);
-                            //info.Prompt = PatchText(dial.Name, speechDifficulty);
-                        }
+                    {
+                        var speechDifficulty = GetSpeechValue(GetSpeechCondition(info)!);
+                        var matchingInfo = grup.Where(i => i != info).ToList().Find(i => MatchByConditions(info, i));
+                        if (matchingInfo is not null)
+                            if (dial.Name?.String is not null)
+                            {
+                                info.Prompt = PatchText(dial.Name, speechDifficulty);
+                                matchingInfo.Prompt = PatchText(dial.Name, speechDifficulty);
+                            }
+                            else if (info.Prompt?.String is not null)
+                            {
+                                info.Prompt = PatchText(info.Prompt, speechDifficulty);
+                                matchingInfo.Prompt = PatchText(info.Prompt, speechDifficulty);
+                            }
+                    }
                 }
-                if (!TextFilter(dial))
+                if (!TextFilter(dial) && !DifferentSpeechChecksFilter(dial))
                     PatchPrompts(grup);
-
-
 
                 foreach (var info in grup)
                 {
