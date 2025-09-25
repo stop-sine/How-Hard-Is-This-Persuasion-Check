@@ -156,7 +156,6 @@ namespace HowHardIsThisPersuasionCheck
             return record.Name?.String?.Contains("(Persuade)") ?? false;
         }
 
-
         public static bool AmuletFilter(IConditionGetter condition)
         {
             return condition is IConditionFloatGetter { Data: IGetEquippedConditionDataGetter { ItemOrList.Link: var link } } && link.Equals(Skyrim.FormList.TGAmuletofArticulationList);
@@ -223,6 +222,13 @@ namespace HowHardIsThisPersuasionCheck
                  !(text.String!.Contains("gold)", StringComparison.OrdinalIgnoreCase) ||
                    text.String!.Contains("septim)", StringComparison.OrdinalIgnoreCase)))
                 text += $" (Persuade: {speechDifficulty})";
+            return text;
+        }
+
+        public static Mutagen.Bethesda.Strings.TranslatedString PatchText(Mutagen.Bethesda.Strings.TranslatedString text)
+        {
+            if (text.String!.Contains("(Persuade)", StringComparison.OrdinalIgnoreCase))
+                text = text.String.Replace("(Persuade)", $"", StringComparison.OrdinalIgnoreCase);
             return text;
         }
 
@@ -657,6 +663,9 @@ namespace HowHardIsThisPersuasionCheck
                     dial.Name = PatchText(dial.Name, GetSpeechValue(speech));
                 }
 
+                if (TextFilter(dial) && !grup.Any(SpeechFilter))
+                    dial.Name = PatchText(dial.Name!);
+
                 if (DifferentSpeechChecksFilter(dial))
                 {
                     Console.WriteLine(dial.FormKey);
@@ -678,6 +687,7 @@ namespace HowHardIsThisPersuasionCheck
                             }
                     }
                 }
+
                 if (!TextFilter(dial) && !DifferentSpeechChecksFilter(dial))
                     PatchPrompts(grup);
 
