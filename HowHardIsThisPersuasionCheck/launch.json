@@ -5,7 +5,7 @@
       "type": "coreclr",
       "request": "launch",
       "name": "Launch HowHardIsThisPersuasionCheck",
-      "program": "${workspaceFolder}/HowHardIsThisPersuasionCheck/bin/Debug/net10.0/HowHardIsThisPersuasionCheck.dll",
+      "program": "${workspaceFolder}/HowHardIsThisPersuasionCheck/bin/Release/net10.0/HowHardIsThisPersuasionCheck.dll",
       "preLaunchTask": "build",
       "args": []
     }
