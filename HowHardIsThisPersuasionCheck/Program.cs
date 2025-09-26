@@ -753,10 +753,7 @@ namespace HowHardIsThisPersuasionCheck
 
                 foreach (var info in grup.Where(SpeechFilter))
                 {
-                    var speeches = info.Conditions.Where(SpeechFilter).ToExtendedList();
-                    var speech = speeches.First(c => c.CompareOperator == CompareOperator.GreaterThanOrEqualTo || c.CompareOperator == CompareOperator.GreaterThan);
-                    speeches.RemoveAll(c => c != speech);
-                    var speechIndex = info.Conditions.IndexOf(speech)!;
+                    var speechIndex = info.Conditions.FindIndex(SpeechFilter)!;
                     info.Conditions[speechIndex] = PatchSpeechCondition(info.Conditions[speechIndex]);
                     if (!AmuletFilter(info))
                         info.Conditions.Insert(speechIndex + 1, ConstructAmulet(info.Conditions[speechIndex].CompareOperator != CompareOperator.GreaterThanOrEqualTo));
