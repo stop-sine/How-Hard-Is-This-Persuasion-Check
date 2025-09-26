@@ -755,7 +755,8 @@ namespace HowHardIsThisPersuasionCheck
                 {
                     var speeches = info.Conditions.Where(SpeechFilter).ToExtendedList();
                     var speech = speeches.First(c => c.CompareOperator == CompareOperator.GreaterThanOrEqualTo || c.CompareOperator == CompareOperator.GreaterThan);
-                    speeches.RemoveAll(c => c != speech);
+                    if (speeches.Count > 1)
+                        speeches.RemoveAll(c => c != speech);
                     var speechIndex = info.Conditions.IndexOf(speech)!;
                     info.Conditions[speechIndex] = PatchSpeechCondition(info.Conditions[speechIndex]);
                     if (!AmuletFilter(info))
