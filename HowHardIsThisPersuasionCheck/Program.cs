@@ -256,8 +256,8 @@ namespace HowHardIsThisPersuasionCheck
 
         private static void EnsureOnBeginScriptFragment(DialogResponses? response, string scriptName, string fragmentName)
         {
-            if (response?.VirtualMachineAdapter?.ScriptFragments?.OnBegin is null)
-                response?.VirtualMachineAdapter?.ScriptFragments?.OnBegin = new ScriptFragment
+            if (response != null && response.VirtualMachineAdapter != null && response.VirtualMachineAdapter.ScriptFragments != null && response.VirtualMachineAdapter.ScriptFragments.OnBegin == null)
+                response.VirtualMachineAdapter.ScriptFragments.OnBegin = new ScriptFragment
                 {
                     ScriptName = scriptName,
                     FragmentName = fragmentName
@@ -450,7 +450,8 @@ namespace HowHardIsThisPersuasionCheck
                 if (dial.Equals(Skyrim.DialogTopic.WERJ02Persuade))
                 {
                     var baseResponse = grup.Find(r => r.FormKey == FormKey.Factory("0B815A:Skyrim.esm"));
-                    baseResponse?.Flags?.Flags = DialogResponses.Flag.Goodbye;
+                    if (baseResponse != null && baseResponse.Flags != null)
+                        baseResponse.Flags.Flags = DialogResponses.Flag.Goodbye;
                 }
                 if (dial.Equals(Skyrim.DialogTopic.MQ201PartyDistractionPersuadeSiddgeir))
                 {
@@ -562,14 +563,19 @@ namespace HowHardIsThisPersuasionCheck
                     if (baseResponse is not null)
                     {
                         AddSpeechCondition(baseResponse, Skyrim.Global.SpeechAverage);
-                        baseResponse.Flags?.Flags = DialogResponses.Flag.Goodbye;
-                        baseResponse.Flags?.Flags |= DialogResponses.Flag.SayOnce;
+                        if (baseResponse.Flags != null)
+                        {
+                            baseResponse.Flags.Flags = DialogResponses.Flag.Goodbye;
+                            baseResponse.Flags.Flags |= DialogResponses.Flag.SayOnce;
+                        }
                     }
 
                     var otherResponse = grup.Find(i => i.FormKey == FormKey.Factory("0D4FC3:Skyrim.esm"));
                     otherResponse?.LinkTo.Clear();
-                    otherResponse?.Flags?.Flags = DialogResponses.Flag.Goodbye;
-                    otherResponse?.Flags?.Flags |= DialogResponses.Flag.SayOnce;
+                    if (otherResponse != null && otherResponse.Flags != null)
+                        otherResponse.Flags.Flags = DialogResponses.Flag.Goodbye;
+                    if (otherResponse != null && otherResponse.Flags != null)
+                        otherResponse.Flags.Flags |= DialogResponses.Flag.SayOnce;
                 }
                 if (dial.Equals(Skyrim.DialogTopic.DA03StartLodBranchPersuadeTopic))
                 {
@@ -788,15 +794,18 @@ namespace HowHardIsThisPersuasionCheck
                         if (info.Prompt?.String is null && dial.Name?.String is not null)
                         {
                             info.Prompt = PatchText(dial.Name, speechDifficulty);
-                            matchingInfo?.Prompt = PatchText(dial.Name, speechDifficulty);
+                            if (matchingInfo != null)
+                                matchingInfo.Prompt = PatchText(dial.Name, speechDifficulty);
                         }
                         else if (info.Prompt?.String is not null)
                         {
                             info.Prompt = PatchText(info.Prompt, speechDifficulty);
                             if (matchingInfo?.Prompt is null)
-                                matchingInfo?.Prompt = PatchText(info.Prompt, speechDifficulty);
-                            else
-                                matchingInfo?.Prompt = PatchText(matchingInfo.Prompt, speechDifficulty);
+                                if (matchingInfo != null)
+                                    matchingInfo.Prompt = PatchText(info.Prompt, speechDifficulty);
+                                else
+                                if (matchingInfo != null)
+                                    matchingInfo.Prompt = PatchText(matchingInfo.Prompt, speechDifficulty);
                         }
                     }
                 }
