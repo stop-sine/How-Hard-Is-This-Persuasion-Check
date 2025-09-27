@@ -118,7 +118,7 @@ namespace HowHardIsThisPersuasionCheck
         }
 
         private static bool SpeechFilter(IDialogResponsesGetter subrecord)
-            => subrecord.Conditions.Any(SpeechFilter);
+            => subrecord.Conditions.Where(SpeechFilter).Count() == 1;
 
         private static bool TextFilter(object record)
         {
