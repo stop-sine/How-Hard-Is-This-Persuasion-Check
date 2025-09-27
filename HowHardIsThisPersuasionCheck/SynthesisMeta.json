@@ -1,11 +1,9 @@
 {
-  "Nickname": "",
+  "Nickname": "HowHardIsThisPersuasionCheck",
   "Visibility": "Visible",
-  "OneLineDescription": "",
-  "LongDescription": "",
+  "OneLineDescription": "A patcher to implement How Hard Is This Persuasion Check",
+  "LongDescription": "A patcher for Skyrim: Special Edition to implement How Hard Is This Persuasion Check using Synthesis",
   "PreferredAutoVersioning": "Default",
   "RequiredMods": [],
-  "TargetedReleases": [
-    "SkyrimSE"
-  ]
+  "TargetedReleases": ["SkyrimSE, SkyrimSEGog, SkyrimVR"]
 }
