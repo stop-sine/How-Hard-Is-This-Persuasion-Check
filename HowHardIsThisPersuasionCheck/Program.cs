@@ -762,10 +762,15 @@ namespace HowHardIsThisPersuasionCheck
                         info.Conditions.Last().Data.Cast<GetIsVoiceTypeConditionData>().VoiceTypeOrList.Link.FormKey = FormKey.Factory("018469:Dragonborn.esm");
                 }
 
-                dial.Name?.String?.Replace("(Speechcraft)", "", StringComparison.OrdinalIgnoreCase);
-                dial.Name?.String?.Replace("[Persuade]", "", StringComparison.OrdinalIgnoreCase);
+
+
                 if (dial.Name?.String is not null)
-                    dial.Name = MovePersuadeToEnd(dial.Name.String);
+                {
+                    dial.Name = dial.Name?.String?.Replace("(Speechcraft)", "", StringComparison.OrdinalIgnoreCase);
+                    dial.Name = dial.Name?.String?.Replace("[Persuade]", "", StringComparison.OrdinalIgnoreCase);
+                    dial.Name = MovePersuadeToEnd(dial.Name!.String!);
+                }
+
 
                 foreach (var info in grup)
                 {
