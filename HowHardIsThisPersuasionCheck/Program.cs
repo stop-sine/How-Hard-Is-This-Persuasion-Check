@@ -762,15 +762,12 @@ namespace HowHardIsThisPersuasionCheck
                         info.Conditions.Last().Data.Cast<GetIsVoiceTypeConditionData>().VoiceTypeOrList.Link.FormKey = FormKey.Factory("018469:Dragonborn.esm");
                 }
 
-
-
                 if (dial.Name?.String is not null)
                 {
                     dial.Name = dial.Name?.String?.Replace("(Speechcraft)", "", StringComparison.OrdinalIgnoreCase);
                     dial.Name = dial.Name?.String?.Replace("[Persuade]", "", StringComparison.OrdinalIgnoreCase);
                     dial.Name = MovePersuadeToEnd(dial.Name!.String!);
                 }
-
 
                 foreach (var info in grup)
                 {
@@ -867,6 +864,8 @@ namespace HowHardIsThisPersuasionCheck
                 foreach (var info in subrecordsGetter)
                     if (grup.Contains(info.DeepCopy()))
                         grup.Remove(info.DeepCopy());
+                if (!record.Responses.Any() && record.Name == dial.Name)
+                    patchMod.DialogTopics.Remove(dial.FormKey);
             }
         }
     }
