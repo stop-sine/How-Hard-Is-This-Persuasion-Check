@@ -864,7 +864,7 @@ namespace HowHardIsThisPersuasionCheck
                 foreach (var info in subrecordsGetter)
                     if (grup.Contains(info.DeepCopy()))
                         grup.Remove(info.DeepCopy());
-                if (!record.Responses.Any() && record.Name == dial.Name)
+                if (!dial.Responses.Any() && record.Name == dial.Name)
                     patchMod.DialogTopics.Remove(dial.FormKey);
             }
         }
