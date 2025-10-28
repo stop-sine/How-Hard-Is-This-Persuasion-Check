@@ -264,6 +264,17 @@ namespace HowHardIsThisPersuasionCheck
                 };
         }
 
+        public static string MovePersuadeToEnd(string input)
+        {
+            const string tag = "(Persuade)";
+            if (input.StartsWith(tag, StringComparison.OrdinalIgnoreCase))
+            {
+                string withoutTag = input[tag.Length..].TrimStart();
+                return $"{withoutTag} {tag}";
+            }
+            return input;
+        }
+
         public static void RunPatch(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
             var cache = state.LinkCache;
@@ -749,6 +760,24 @@ namespace HowHardIsThisPersuasionCheck
                     });
                     foreach (var info in grup.Where(i => !SpeechFilter(i)))
                         info.Conditions.Last().Data.Cast<GetIsVoiceTypeConditionData>().VoiceTypeOrList.Link.FormKey = FormKey.Factory("018469:Dragonborn.esm");
+                }
+
+                dial.Name?.String?.Replace("(Speechcraft)", "", StringComparison.OrdinalIgnoreCase);
+                dial.Name?.String?.Replace("[Persuade]", "", StringComparison.OrdinalIgnoreCase);
+                if (dial.Name?.String is not null)
+                    dial.Name = MovePersuadeToEnd(dial.Name.String);
+
+                foreach (var info in grup)
+                {
+                    if (info.Prompt?.String is not null)
+                        info.Prompt = MovePersuadeToEnd(info.Prompt.String);
+                    foreach (var response in info.Responses)
+                    {
+                        response.Text?.String?.Replace("(Fail)", "", StringComparison.OrdinalIgnoreCase);
+                        response.Text?.String?.Replace("(Failed)", "", StringComparison.OrdinalIgnoreCase);
+                        response.Text?.String?.Replace("(Success)", "", StringComparison.OrdinalIgnoreCase);
+                        response.Text?.String?.Replace("(Succeeded)", "", StringComparison.OrdinalIgnoreCase);
+                    }
                 }
 
                 foreach (var info in grup.Where(SpeechFilter))
